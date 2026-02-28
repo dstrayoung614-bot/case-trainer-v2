@@ -50,6 +50,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, []);
 
+  async function createSession(user: User) {
+    const idToken = await user.getIdToken();
+    await fetch('/api/auth/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken }),
+    });
+  }
+
   async function signUp(email: string, password: string) {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     const newProfile: UserProfile = {
@@ -60,13 +69,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
     await setDoc(doc(db, 'users', cred.user.uid), newProfile);
     setProfile(newProfile);
+    await createSession(cred.user);
   }
 
   async function signIn(email: string, password: string) {
-    await signInWithEmailAndPassword(auth, email, password);
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+    await createSession(cred.user);
   }
 
   async function logOut() {
+    await fetch('/api/auth/session', { method: 'DELETE' });
     await signOut(auth);
     setProfile(null);
   }
