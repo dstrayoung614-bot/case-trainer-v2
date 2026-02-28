@@ -263,7 +263,7 @@ function LandingScreen({
 
         <div className="grid grid-cols-3 gap-4 text-center">
           {[
-            { icon: '📝', label: '20 кейсов', sub: 'разной сложности' },
+            { icon: '📝', label: '40 кейсов', sub: 'разной сложности' },
             { icon: '📊', label: '6 критериев', sub: 'рубрики' },
             { icon: '🤖', label: 'AI-наставник', sub: 'докручивает ответ' },
           ].map((item) => (
@@ -1372,6 +1372,54 @@ function SettingsModal({
   );
 }
 
+// ─── Onboarding modal ─────────────────────────────────────────────────────────
+
+function OnboardingModal({ onClose }: { onClose: () => void }) {
+  const steps = [
+    { icon: '📝', title: '40 кейсов', desc: 'Реальные продуктовые задачи: метрики, запуск фич, монетизация, B2B' },
+    { icon: '🤖', title: 'AI-обратная связь', desc: 'Получай оценку по 6 критериям и улучшенную версию своего ответа' },
+    { icon: '📊', title: 'Отслеживай прогресс', desc: 'История попыток и динамика роста сохраняются в твоём профиле' },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 space-y-6">
+        <div className="text-center space-y-2">
+          <div className="text-4xl">👋</div>
+          <h2 className="text-2xl font-bold text-gray-900">Добро пожаловать!</h2>
+          <p className="text-sm text-gray-500">
+            CaseTrainer поможет прокачать структурное мышление через практику продуктовых кейсов
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          {steps.map((s) => (
+            <div key={s.title} className="flex items-start gap-4 bg-gray-50 rounded-xl p-4">
+              <div className="text-2xl flex-shrink-0">{s.icon}</div>
+              <div>
+                <div className="font-semibold text-gray-800 text-sm">{s.title}</div>
+                <div className="text-xs text-gray-500 mt-0.5">{s.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="space-y-2">
+          <button
+            onClick={onClose}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition-colors text-sm shadow-md"
+          >
+            Начать тренировку →
+          </button>
+          <p className="text-center text-xs text-gray-400">
+            Это сообщение больше не появится
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── main app ─────────────────────────────────────────────────────────────────
 
 export default function Home() {
@@ -1391,6 +1439,17 @@ export default function Home() {
   const [attemptNumber, setAttemptNumber] = useState(1);
   const [feedbackUseful, setFeedbackUseful] = useState<boolean | null>(null);
   const [progressStats, setProgressStats] = useState<{ total: number; avgScore: number; uniqueCases: number } | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Онбординг — показываем один раз новым пользователям
+  useEffect(() => {
+    if (user && typeof window !== 'undefined') {
+      const key = `ct_onboarded_${user.uid}`;
+      if (!localStorage.getItem(key)) {
+        setShowOnboarding(true);
+      }
+    }
+  }, [user]);
 
   // reload progress stats every time user lands on the home screen
   useEffect(() => {
@@ -1548,6 +1607,13 @@ export default function Home() {
 
   const resetProgress = () => setProgressStats(null);
 
+  const closeOnboarding = () => {
+    if (user && typeof window !== 'undefined') {
+      localStorage.setItem(`ct_onboarded_${user.uid}`, '1');
+    }
+    setShowOnboarding(false);
+  };
+
   const handleLogOut = async () => {
     await logOut();
     router.push('/login');
@@ -1555,6 +1621,9 @@ export default function Home() {
 
   return (
     <>
+      {/* Онбординг-модалка для новых пользователей */}
+      {showOnboarding && <OnboardingModal onClose={closeOnboarding} />}
+
       {/* Кнопки профиля / выхода */}
       <div className="fixed bottom-5 right-5 z-40 flex items-center gap-2">
         {profile?.role === 'admin' && (

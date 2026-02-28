@@ -51,7 +51,21 @@ export default function RegisterPage() {
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center space-y-1">
           <h1 className="text-2xl font-bold text-gray-900">CaseTrainer</h1>
-          <p className="text-sm text-gray-500">Создайте аккаунт</p>
+          <p className="text-sm text-gray-500">Создайте аккаунт — это бесплатно</p>
+        </div>
+
+        {/* Value props */}
+        <div className="grid grid-cols-3 gap-2 text-center">
+          {[
+            { icon: '📝', text: '40 кейсов' },
+            { icon: '🤖', text: 'AI-фидбек' },
+            { icon: '📊', text: 'Прогресс' },
+          ].map((item) => (
+            <div key={item.text} className="bg-white rounded-xl py-2 px-1 border border-gray-100 shadow-sm">
+              <div className="text-lg">{item.icon}</div>
+              <div className="text-xs text-gray-600 font-medium mt-0.5">{item.text}</div>
+            </div>
+          ))}
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
