@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     const prompt = buildPrompt(body);
 
     const completion = await client.chat.completions.create({
-      model: process.env.OPENROUTER_MODEL ?? 'google/gemini-flash-1.5',
+      model: process.env.OPENROUTER_MODEL ?? 'google/gemini-2.0-flash-001',
       temperature: 0.4,
       response_format: { type: 'json_object' },
       messages: [
