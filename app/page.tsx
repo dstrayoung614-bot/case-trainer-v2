@@ -250,7 +250,7 @@ function LandingScreen({
       <div className="max-w-xl w-full text-center space-y-8">
         <div className="space-y-3">
           <span className="inline-block bg-indigo-100 text-indigo-700 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wide">
-            MVP v1.2
+            MVP V2.0
           </span>
           <h1 className="text-4xl font-bold text-gray-900 leading-tight">
             CaseTrainer
