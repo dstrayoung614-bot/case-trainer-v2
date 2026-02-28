@@ -24,13 +24,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!body.apiKey) {
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
       return NextResponse.json(getMockFeedback(body), { status: 200 });
     }
 
     const client = new OpenAI({
       baseURL: 'https://openrouter.ai/api/v1',
-      apiKey: body.apiKey,
+      apiKey,
       defaultHeaders: {
         'HTTP-Referer': 'https://case-trainer.app',
         'X-Title': 'CaseTrainer',
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
     const prompt = buildPrompt(body);
 
     const completion = await client.chat.completions.create({
-      model: body.model,
+      model: process.env.OPENROUTER_MODEL ?? 'google/gemini-flash-1.5',
       temperature: 0.4,
       response_format: { type: 'json_object' },
       messages: [

@@ -12,13 +12,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Solution is too short' }, { status: 400 });
     }
 
-    if (!body.apiKey) {
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
       return NextResponse.json(getMockUpgrade(body), { status: 200 });
     }
 
     const client = new OpenAI({
       baseURL: 'https://openrouter.ai/api/v1',
-      apiKey: body.apiKey,
+      apiKey,
       defaultHeaders: {
         'HTTP-Referer': 'https://case-trainer.app',
         'X-Title': 'CaseTrainer',
@@ -69,7 +70,7 @@ ${body.originalSolution}
 Изменений должно быть 3-6, уроков — 3. Будь конкретным, ссылайся на кейс.`;
 
     const completion = await client.chat.completions.create({
-      model: body.model,
+      model: process.env.OPENROUTER_MODEL ?? 'google/gemini-flash-1.5',
       temperature: 0.4,
       response_format: { type: 'json_object' },
       messages: [
