@@ -1375,7 +1375,7 @@ function SettingsModal({
 // ─── main app ─────────────────────────────────────────────────────────────────
 
 export default function Home() {
-  const { user, logOut } = useAuth();
+  const { user, profile, logOut } = useAuth();
   const router = useRouter();
 
   const [screen, setScreen] = useState<AppScreen>('landing');
@@ -1557,6 +1557,15 @@ export default function Home() {
     <>
       {/* Кнопки профиля / выхода */}
       <div className="fixed bottom-5 right-5 z-40 flex items-center gap-2">
+        {profile?.role === 'admin' && (
+          <Link
+            href="/admin"
+            className="px-3 py-2 rounded-full bg-purple-100 border border-purple-200 shadow-md text-xs text-purple-700 hover:bg-purple-200 hover:shadow-lg transition-all"
+            title="Дашборд преподавателя"
+          >
+            Админ
+          </Link>
+        )}
         <Link
           href="/profile"
           className="px-3 py-2 rounded-full bg-white border border-gray-200 shadow-md text-xs text-gray-500 hover:text-indigo-600 hover:shadow-lg transition-all"
