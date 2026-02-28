@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { cases, guidedStarterCase, getRandomCase } from './lib/cases';
 import { useAuth } from './lib/auth-context';
 import { saveAttempt, loadAttempts, calcStats } from './lib/firestore-progress';
@@ -1554,14 +1555,23 @@ export default function Home() {
 
   return (
     <>
-      {/* Кнопка выхода */}
-      <button
-        onClick={handleLogOut}
-        className="fixed bottom-5 right-5 z-40 px-3 py-2 rounded-full bg-white border border-gray-200 shadow-md text-xs text-gray-500 hover:text-gray-800 hover:shadow-lg transition-all"
-        title="Выйти"
-      >
-        Выйти
-      </button>
+      {/* Кнопки профиля / выхода */}
+      <div className="fixed bottom-5 right-5 z-40 flex items-center gap-2">
+        <Link
+          href="/profile"
+          className="px-3 py-2 rounded-full bg-white border border-gray-200 shadow-md text-xs text-gray-500 hover:text-indigo-600 hover:shadow-lg transition-all"
+          title="Профиль"
+        >
+          Профиль
+        </Link>
+        <button
+          onClick={handleLogOut}
+          className="px-3 py-2 rounded-full bg-white border border-gray-200 shadow-md text-xs text-gray-500 hover:text-gray-800 hover:shadow-lg transition-all"
+          title="Выйти"
+        >
+          Выйти
+        </button>
+      </div>
       {error && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 shadow-lg z-50 max-w-sm text-center">
           {error}
