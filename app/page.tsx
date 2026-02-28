@@ -1,7 +1,10 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { cases, guidedStarterCase, getRandomCase } from './lib/cases';
+import { useAuth } from './lib/auth-context';
+import { saveAttempt, loadAttempts, calcStats } from './lib/firestore-progress';
 import {
   AppScreen,
   Case,
@@ -64,37 +67,7 @@ function formatDimension(raw: string): string {
     .trim();
 }
 
-// ─── progress tracking ────────────────────────────────────────────────────────
-
-interface ProgressEntry {
-  caseId: number;
-  caseTitle: string;
-  avgScore: number;
-  confidence: number;
-  ts: number;
-}
-
-function saveProgress(caseId: number, caseTitle: string, avgScore: number, confidence: number) {
-  try {
-    const existing: ProgressEntry[] = JSON.parse(localStorage.getItem('ct_progress') || '[]');
-    existing.push({ caseId, caseTitle, avgScore, confidence, ts: Date.now() });
-    localStorage.setItem('ct_progress', JSON.stringify(existing.slice(-100)));
-  } catch {}
-}
-
-function loadProgressStats(): { total: number; avgScore: number; uniqueCases: number } | null {
-  try {
-    const entries: ProgressEntry[] = JSON.parse(localStorage.getItem('ct_progress') || '[]');
-    if (entries.length === 0) return null;
-    return {
-      total: entries.length,
-      avgScore: entries.reduce((a, b) => a + b.avgScore, 0) / entries.length,
-      uniqueCases: new Set(entries.map((e) => e.caseId)).size,
-    };
-  } catch {
-    return null;
-  }
-}
+// ─── progress tracking (Firestore) ──────────────────────────────────────────
 
 const DIFFICULTY_LABELS: Record<string, string> = {
   easy: 'Лёгкий',
@@ -317,7 +290,7 @@ function LandingScreen({
         </div>
 
         <p className="text-xs text-gray-400">
-          Авторизация не требуется · Данные хранятся только в браузере
+          Прогресс сохраняется в вашем аккаунте
         </p>
 
         {progressStats && (
@@ -1401,6 +1374,9 @@ function SettingsModal({
 // ─── main app ─────────────────────────────────────────────────────────────────
 
 export default function Home() {
+  const { user, logOut } = useAuth();
+  const router = useRouter();
+
   const [screen, setScreen] = useState<AppScreen>('landing');
   const [activeCase, setActiveCase] = useState<Case>(guidedStarterCase);
   const [solution, setSolution] = useState<SolutionSections>(EMPTY_SOLUTION);
@@ -1414,26 +1390,13 @@ export default function Home() {
   const [attemptNumber, setAttemptNumber] = useState(1);
   const [feedbackUseful, setFeedbackUseful] = useState<boolean | null>(null);
   const [progressStats, setProgressStats] = useState<{ total: number; avgScore: number; uniqueCases: number } | null>(null);
-  const [openRouterKey, setOpenRouterKey] = useState('');
-  const [selectedModel, setSelectedModel] = useState('anthropic/claude-sonnet-4.5');
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // reload progress stats every time user lands on the home screen
   useEffect(() => {
-    if (screen === 'landing') {
-      setProgressStats(loadProgressStats());
+    if (screen === 'landing' && user) {
+      loadAttempts(user.uid).then((entries) => setProgressStats(calcStats(entries)));
     }
-  }, [screen]);
-
-  // load API settings from localStorage on mount
-  useEffect(() => {
-    try {
-      const savedKey = localStorage.getItem('ct_api_key') || '';
-      const savedModel = localStorage.getItem('ct_model') || 'anthropic/claude-sonnet-4.5';
-      setOpenRouterKey(savedKey);
-      setSelectedModel(savedModel);
-    } catch {}
-  }, []);
+  }, [screen, user]);
 
   const resetForCase = (c: Case, resetAttempt = true) => {
     setActiveCase(c);
@@ -1488,8 +1451,6 @@ export default function Home() {
           solution: joinSolution(solution),
           selfReview,
           rubricVersion: 'v1',
-          apiKey: openRouterKey,
-          model: selectedModel,
         }),
       });
       if (!res.ok) {
@@ -1501,7 +1462,9 @@ export default function Home() {
         Object.values(data.scores).reduce((a, b) => a + b, 0) /
         Object.values(data.scores).length;
       track('feedback_received', { caseId: activeCase.id, attemptNumber, avgScore: parseFloat(avg.toFixed(2)) });
-      saveProgress(activeCase.id, activeCase.title, avg, selfReview.confidence);
+      if (user) {
+        saveAttempt(user.uid, { caseId: activeCase.id, caseTitle: activeCase.title, avgScore: avg, confidence: selfReview.confidence }).catch(console.error);
+      }
       setFeedback(data);
       setScreen('feedback');
     } catch (err) {
@@ -1514,7 +1477,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [activeCase, solution, selfReview, attemptNumber, openRouterKey, selectedModel]);
+  }, [activeCase, solution, selfReview, attemptNumber, user]);
 
   const requestUpgrade = useCallback(async () => {
     if (!feedback) return;
@@ -1535,8 +1498,6 @@ export default function Home() {
           skillFocus: activeCase.skillFocus,
           originalSolution: joinSolution(solution),
           feedback,
-          apiKey: openRouterKey,
-          model: selectedModel,
         }),
       });
       if (!res.ok) {
@@ -1553,7 +1514,7 @@ export default function Home() {
     } finally {
       setUpgradeLoading(false);
     }
-  }, [activeCase, solution, feedback, attemptNumber, openRouterKey, selectedModel]);
+  }, [activeCase, solution, feedback, attemptNumber]);
 
   const handleFeedbackUseful = (v: boolean) => {
     setFeedbackUseful(v);
@@ -1584,38 +1545,22 @@ export default function Home() {
     setScreen('landing');
   };
 
-  const resetProgress = () => {
-    try {
-      localStorage.removeItem('ct_progress');
-      localStorage.removeItem('ct_events');
-    } catch {}
-    setProgressStats(null);
-  };
+  const resetProgress = () => setProgressStats(null);
 
-  const saveSettings = (key: string, model: string) => {
-    try {
-      localStorage.setItem('ct_api_key', key);
-      localStorage.setItem('ct_model', model);
-    } catch {}
-    setOpenRouterKey(key);
-    setSelectedModel(model);
+  const handleLogOut = async () => {
+    await logOut();
+    router.push('/login');
   };
 
   return (
     <>
-      <SettingsModal
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        apiKey={openRouterKey}
-        model={selectedModel}
-        onSave={saveSettings}
-      />
+      {/* Кнопка выхода */}
       <button
-        onClick={() => setSettingsOpen(true)}
-        className="fixed bottom-5 right-5 z-40 w-10 h-10 rounded-full bg-white border border-gray-200 shadow-md flex items-center justify-center text-gray-500 hover:text-gray-800 hover:shadow-lg transition-all"
-        title="Настройки AI"
+        onClick={handleLogOut}
+        className="fixed bottom-5 right-5 z-40 px-3 py-2 rounded-full bg-white border border-gray-200 shadow-md text-xs text-gray-500 hover:text-gray-800 hover:shadow-lg transition-all"
+        title="Выйти"
       >
-        ⚙
+        Выйти
       </button>
       {error && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 shadow-lg z-50 max-w-sm text-center">
