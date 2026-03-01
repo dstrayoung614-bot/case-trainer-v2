@@ -12,6 +12,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -30,7 +31,7 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      await signUp(email, password);
+      await signUp(email, password, displayName);
       router.push('/');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Ошибка регистрации';
@@ -70,6 +71,19 @@ export default function RegisterPage() {
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700">Никнейм</label>
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                placeholder="Как вас показывать в рейтинге?"
+                maxLength={30}
+              />
+              <p className="text-xs text-gray-400">Необязательно — можно оставить пустым</p>
+            </div>
+
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">Email</label>
               <input

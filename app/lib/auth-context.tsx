@@ -16,6 +16,7 @@ export type UserRole = 'student' | 'admin';
 export interface UserProfile {
   uid: string;
   email: string;
+  displayName: string;
   role: UserRole;
   createdAt: unknown;
 }
@@ -24,7 +25,7 @@ interface AuthContextValue {
   user: User | null;
   profile: UserProfile | null;
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   logOut: () => Promise<void>;
 }
@@ -59,11 +60,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  async function signUp(email: string, password: string) {
+  async function signUp(email: string, password: string, displayName: string) {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     const newProfile: UserProfile = {
       uid: cred.user.uid,
       email,
+      displayName: displayName.trim() || email.split('@')[0],
       role: 'student',
       createdAt: serverTimestamp(),
     };
