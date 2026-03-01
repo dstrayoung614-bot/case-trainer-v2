@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../lib/auth-context';
 import { loadAttempts, AttemptEntry } from '../lib/firestore-progress';
+import { buildGamification } from '../lib/gamification';
 
 function ScoreBadge({ score }: { score: number }) {
   const color =
@@ -20,20 +21,56 @@ function ScoreBadge({ score }: { score: number }) {
 
 // mini sparkline bar chart (last N attempts)
 function ScoreSparkline({ entries }: { entries: AttemptEntry[] }) {
-  if (entries.length < 2) return null;
   const recent = [...entries].reverse().slice(-12); // хронологический порядок, последние 12
+  const fillers = Math.max(0, 12 - recent.length);
+  const bars: Array<AttemptEntry | null> = [
+    ...recent,
+    ...Array.from({ length: fillers }).map(() => null),
+  ];
   const max = 5;
+  const min = 1;
+  const minVisiblePct = 4;
+
+  const toHeightPct = (score: number) => {
+    const clamped = Math.min(max, Math.max(min, score));
+    const raw = ((clamped - min) / (max - min)) * 100;
+    return Math.max(raw, minVisiblePct);
+  };
+
   return (
-    <div className="flex items-end gap-1 h-10">
-      {recent.map((e, i) => {
-        const pct = (e.avgScore / max) * 100;
-        const color = e.avgScore >= 4 ? 'bg-emerald-400' : e.avgScore >= 3 ? 'bg-amber-400' : 'bg-red-400';
-        return (
-          <div key={i} className="flex-1 flex flex-col items-center justify-end gap-0.5" title={`${e.avgScore.toFixed(1)} — ${e.caseTitle}`}>
-            <div className={`w-full rounded-sm ${color} transition-all`} style={{ height: `${pct}%` }} />
-          </div>
-        );
-      })}
+    <div className="h-24 grid grid-cols-[20px_1fr] gap-1">
+      <div className="h-full flex flex-col justify-between text-[10px] text-gray-700 font-semibold pointer-events-none">
+        {[5, 4, 3, 2, 1].map((tick) => (
+          <span key={tick} className="leading-none">{tick}</span>
+        ))}
+      </div>
+
+      <div className="relative h-full">
+        <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+          {[5, 4, 3, 2, 1].map((tick) => (
+            <div key={tick} className="border-t border-gray-300" />
+          ))}
+        </div>
+
+        <div className="relative z-10 flex items-end gap-1 h-full">
+          {bars.map((e, i) => {
+            if (!e) {
+              return (
+                <div key={i} className="flex-1 h-full flex flex-col items-center justify-end">
+                  <div className="w-full rounded-sm bg-gray-100" style={{ height: `${minVisiblePct}%` }} />
+                </div>
+              );
+            }
+            const pct = toHeightPct(e.avgScore);
+            const color = e.avgScore >= 4 ? 'bg-emerald-400' : e.avgScore >= 3 ? 'bg-amber-400' : 'bg-red-400';
+            return (
+              <div key={i} className="flex-1 h-full flex flex-col items-center justify-end gap-0.5" title={`${e.avgScore.toFixed(1)} — ${e.caseTitle}`}>
+                <div className={`w-full rounded-sm ${color} transition-all`} style={{ height: `${pct}%` }} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
@@ -73,6 +110,7 @@ export default function ProfilePage() {
     ? attempts.reduce((a, b) => a + b.avgScore, 0) / totalAttempts
     : 0;
   const uniqueCases = new Set(attempts.map((e) => e.caseId)).size;
+  const game = buildGamification(attempts);
 
   // динамика: последние 5 vs предыдущие 5
   const chronological = [...attempts].reverse();
@@ -110,14 +148,30 @@ export default function ProfilePage() {
         {/* header */}
         <div className="flex items-center justify-between">
           <Link href="/" className="text-gray-400 hover:text-gray-600 text-sm">← На главную</Link>
-          <button onClick={handleLogOut} className="text-xs text-gray-400 hover:text-red-500 transition-colors">
-            Выйти
-          </button>
+          <div className="flex items-center gap-4">
+            <Link href="/leaderboard" className="text-xs text-gray-400 hover:text-indigo-600 transition-colors">Leaderboard</Link>
+            <button onClick={handleLogOut} className="text-xs text-gray-400 hover:text-red-500 transition-colors">
+              Выйти
+            </button>
+          </div>
         </div>
 
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Мой профиль</h1>
           <p className="text-sm text-gray-500 mt-0.5">{profile?.email}</p>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Уровень</p>
+              <p className="text-xl font-bold text-gray-900 mt-1">{game.level}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-gray-500">Лучшая серия</p>
+              <p className="text-lg font-semibold text-amber-600 mt-1">🔥 {game.longestStreakDays} дн.</p>
+            </div>
+          </div>
         </div>
 
         {/* stats cards */}
@@ -146,24 +200,45 @@ export default function ProfilePage() {
         </div>
 
         {/* dynamics */}
-        {totalAttempts >= 2 && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-gray-800 text-sm">📈 Динамика</h2>
-              {delta !== null && (
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                  delta > 0 ? 'bg-emerald-100 text-emerald-700' :
-                  delta < 0 ? 'bg-red-100 text-red-700' :
-                  'bg-gray-100 text-gray-600'
-                }`}>
-                  {delta > 0 ? '+' : ''}{delta.toFixed(1)} за последние 5
-                </span>
-              )}
-            </div>
-            <ScoreSparkline entries={attempts} />
-            <p className="text-xs text-gray-400">Каждая полоска — одна попытка. Высота = балл (макс 5)</p>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-gray-800 text-sm">📈 Динамика</h2>
+            {delta !== null && (
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                delta > 0 ? 'bg-emerald-100 text-emerald-700' :
+                delta < 0 ? 'bg-red-100 text-red-700' :
+                'bg-gray-100 text-gray-600'
+              }`}>
+                {delta > 0 ? '+' : ''}{delta.toFixed(1)} за последние 5
+              </span>
+            )}
           </div>
-        )}
+          <ScoreSparkline entries={attempts} />
+          <p className="text-xs text-gray-400">Каждая полоска — одна попытка. Высота = балл (макс 5)</p>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100">
+            <h2 className="font-semibold text-gray-800 text-sm">🏅 Бейджи</h2>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {game.badges.map((badge) => (
+              <div key={badge.id} className="px-5 py-3.5 flex items-center gap-4">
+                <div className="text-xl">{badge.icon}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-800">{badge.title}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{badge.description}</p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className={`text-xs font-semibold ${badge.unlocked ? 'text-emerald-600' : 'text-gray-400'}`}>
+                    {badge.unlocked ? 'Получен' : 'В процессе'}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">{badge.progressText}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
         {/* per-case breakdown */}
         {caseStats.length > 0 && (

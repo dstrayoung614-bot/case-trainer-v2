@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { cases, guidedStarterCase, getRandomCase } from './lib/cases';
 import { useAuth } from './lib/auth-context';
 import { saveAttempt, loadAttempts, calcStats } from './lib/firestore-progress';
+import { BadgeMeta, buildGamification, getBadgeMeta } from './lib/gamification';
 import {
   AppScreen,
   Case,
@@ -739,6 +740,7 @@ function FeedbackScreen({
   upgradeLoading,
   feedbackUseful,
   onFeedbackUseful,
+  newBadges,
   screen,
 }: {
   feedback: FeedbackResponse;
@@ -753,6 +755,7 @@ function FeedbackScreen({
   upgradeLoading: boolean;
   feedbackUseful: boolean | null;
   onFeedbackUseful: (v: boolean) => void;
+  newBadges: BadgeMeta[];
   screen: AppScreen;
 }) {
   const avgScore =
@@ -786,6 +789,22 @@ function FeedbackScreen({
               <a href="https://openrouter.ai/settings/keys" target="_blank" rel="noreferrer" className="underline">OpenRouter API ключ</a>{' '}
               и нажмите Сохранить.
             </p>
+          </div>
+        )}
+
+        {newBadges.length > 0 && (
+          <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-5 space-y-3">
+            <h3 className="font-semibold text-indigo-800">🎉 Вы получили бейдж!</h3>
+            <div className="grid sm:grid-cols-2 gap-2">
+              {newBadges.map((badge) => (
+                <div key={badge.id} className="bg-white border border-indigo-100 rounded-xl px-3 py-2">
+                  <p className="text-sm font-semibold text-gray-800">
+                    {badge.icon} {badge.title}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">{badge.description}</p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -1457,6 +1476,7 @@ export default function Home() {
   const [attemptNumber, setAttemptNumber] = useState(1);
   const [feedbackUseful, setFeedbackUseful] = useState<boolean | null>(null);
   const [progressStats, setProgressStats] = useState<{ total: number; avgScore: number; uniqueCases: number } | null>(null);
+  const [newBadges, setNewBadges] = useState<BadgeMeta[]>([]);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Онбординг — показываем один раз новым пользователям
@@ -1485,6 +1505,7 @@ export default function Home() {
     setUpgrade(null);
     setError(null);
     setFeedbackUseful(null);
+    setNewBadges([]);
     if (resetAttempt) setAttemptNumber(1);
   };
 
@@ -1541,7 +1562,23 @@ export default function Home() {
         Object.values(data.scores).length;
       track('feedback_received', { caseId: activeCase.id, attemptNumber, avgScore: parseFloat(avg.toFixed(2)) });
       if (user) {
-        saveAttempt(user.uid, { caseId: activeCase.id, caseTitle: activeCase.title, avgScore: avg, confidence: selfReview.confidence }).catch(console.error);
+        const beforeEntries = await loadAttempts(user.uid);
+        const before = buildGamification(beforeEntries);
+
+        await saveAttempt(user.uid, {
+          caseId: activeCase.id,
+          caseTitle: activeCase.title,
+          avgScore: avg,
+          confidence: selfReview.confidence,
+        });
+
+        const afterEntries = await loadAttempts(user.uid);
+        const after = buildGamification(afterEntries);
+        const unlockedNow = after.unlockedBadgeIds.filter(
+          (badgeId) => !before.unlockedBadgeIds.includes(badgeId)
+        );
+        setNewBadges(unlockedNow.map((badgeId) => getBadgeMeta(badgeId)));
+        setProgressStats(calcStats(afterEntries));
       }
       setFeedback(data);
       setScreen('feedback');
@@ -1609,6 +1646,7 @@ export default function Home() {
     setUpgrade(null);
     setError(null);
     setFeedbackUseful(null);
+    setNewBadges([]);
     setScreen('case');
   };
 
@@ -1662,6 +1700,13 @@ export default function Home() {
             >
               Профиль
             </Link>
+            <Link
+              href="/leaderboard"
+              className="px-3 py-2 rounded-full bg-white border border-gray-200 shadow-md text-xs text-gray-500 hover:text-indigo-600 hover:shadow-lg transition-all"
+              title="Лидерборд"
+            >
+              Топ-20
+            </Link>
             <button
               onClick={handleLogOut}
               className="px-3 py-2 rounded-full bg-white border border-gray-200 shadow-md text-xs text-gray-500 hover:text-gray-800 hover:shadow-lg transition-all"
@@ -1683,6 +1728,12 @@ export default function Home() {
               className="px-3 py-2 rounded-full bg-white border border-gray-200 shadow-md text-xs text-gray-500 hover:text-gray-800 hover:shadow-lg transition-all"
             >
               Войти
+            </Link>
+            <Link
+              href="/leaderboard"
+              className="px-3 py-2 rounded-full bg-white border border-gray-200 shadow-md text-xs text-gray-500 hover:text-indigo-600 hover:shadow-lg transition-all"
+            >
+              Топ-20
             </Link>
           </>
         )}
@@ -1736,6 +1787,7 @@ export default function Home() {
           upgradeLoading={upgradeLoading}
           feedbackUseful={feedbackUseful}
           onFeedbackUseful={handleFeedbackUseful}
+          newBadges={newBadges}
           screen={screen}
         />
       )}

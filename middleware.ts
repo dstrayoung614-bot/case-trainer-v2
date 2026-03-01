@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // Публичные маршруты — доступны без авторизации
-const PUBLIC_PATHS = ['/', '/login', '/register'];
+const PUBLIC_PATHS = ['/', '/login', '/register', '/leaderboard'];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

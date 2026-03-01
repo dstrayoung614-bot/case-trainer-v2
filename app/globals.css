@@ -24,4 +24,12 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+
+  .text-gray-300,
+  .text-gray-400,
+  .text-gray-500,
+  .text-gray-600,
+  .text-gray-700 {
+    color: #111827 !important;
+  }
 }
