@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // Публичные маршруты — доступны без авторизации
-const PUBLIC_PATHS = ['/login', '/register'];
+const PUBLIC_PATHS = ['/', '/login', '/register'];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Пропускаем публичные пути и статику
   if (
-    PUBLIC_PATHS.some((p) => pathname.startsWith(p)) ||
+    pathname === '/' ||
+    PUBLIC_PATHS.filter(p => p !== '/').some((p) => pathname.startsWith(p)) ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
     pathname.includes('.')

@@ -622,6 +622,7 @@ function SelfReviewScreen({
   loading,
   onBack,
   screen,
+  isGuest,
 }: {
   selfReview: SelfReview;
   setSelfReview: (sr: SelfReview) => void;
@@ -629,6 +630,7 @@ function SelfReviewScreen({
   loading: boolean;
   onBack: () => void;
   screen: AppScreen;
+  isGuest?: boolean;
 }) {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-10">
@@ -683,23 +685,39 @@ function SelfReviewScreen({
             />
           </div>
 
-          <button
-            onClick={onAnalyze}
-            disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <>
-                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                </svg>
-                Анализирую ваш ответ...
-              </>
-            ) : (
-              'Анализировать →'
-            )}
-          </button>
+          {isGuest ? (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-5 text-center space-y-3">
+              <div className="text-2xl">🔒</div>
+              <p className="text-sm font-semibold text-gray-800">Войдите, чтобы получить AI-фидбек</p>
+              <p className="text-xs text-gray-500">Бесплатно — оценка по 6 критериям, AI-наставник докрутит ответ</p>
+              <div className="flex gap-2">
+                <Link href="/register" className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl text-sm text-center transition-colors">
+                  Зарегистрироваться
+                </Link>
+                <Link href="/login" className="flex-1 bg-white hover:bg-gray-50 text-gray-700 font-medium py-2.5 rounded-xl text-sm text-center border border-gray-200 transition-colors">
+                  Войти
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={onAnalyze}
+              disabled={loading}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  Анализирую ваш ответ...
+                </>
+              ) : (
+                'Анализировать →'
+              )}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -1626,29 +1644,48 @@ export default function Home() {
 
       {/* Кнопки профиля / выхода */}
       <div className="fixed bottom-5 right-5 z-40 flex items-center gap-2">
-        {profile?.role === 'admin' && (
-          <Link
-            href="/admin"
-            className="px-3 py-2 rounded-full bg-purple-100 border border-purple-200 shadow-md text-xs text-purple-700 hover:bg-purple-200 hover:shadow-lg transition-all"
-            title="Дашборд преподавателя"
-          >
-            Админ
-          </Link>
+        {user ? (
+          <>
+            {profile?.role === 'admin' && (
+              <Link
+                href="/admin"
+                className="px-3 py-2 rounded-full bg-purple-100 border border-purple-200 shadow-md text-xs text-purple-700 hover:bg-purple-200 hover:shadow-lg transition-all"
+                title="Дашборд преподавателя"
+              >
+                Админ
+              </Link>
+            )}
+            <Link
+              href="/profile"
+              className="px-3 py-2 rounded-full bg-white border border-gray-200 shadow-md text-xs text-gray-500 hover:text-indigo-600 hover:shadow-lg transition-all"
+              title="Профиль"
+            >
+              Профиль
+            </Link>
+            <button
+              onClick={handleLogOut}
+              className="px-3 py-2 rounded-full bg-white border border-gray-200 shadow-md text-xs text-gray-500 hover:text-gray-800 hover:shadow-lg transition-all"
+              title="Выйти"
+            >
+              Выйти
+            </button>
+          </>
+        ) : (
+          <>
+            <Link
+              href="/register"
+              className="px-3 py-2 rounded-full bg-indigo-600 border border-indigo-700 shadow-md text-xs text-white hover:bg-indigo-700 hover:shadow-lg transition-all"
+            >
+              Регистрация
+            </Link>
+            <Link
+              href="/login"
+              className="px-3 py-2 rounded-full bg-white border border-gray-200 shadow-md text-xs text-gray-500 hover:text-gray-800 hover:shadow-lg transition-all"
+            >
+              Войти
+            </Link>
+          </>
         )}
-        <Link
-          href="/profile"
-          className="px-3 py-2 rounded-full bg-white border border-gray-200 shadow-md text-xs text-gray-500 hover:text-indigo-600 hover:shadow-lg transition-all"
-          title="Профиль"
-        >
-          Профиль
-        </Link>
-        <button
-          onClick={handleLogOut}
-          className="px-3 py-2 rounded-full bg-white border border-gray-200 shadow-md text-xs text-gray-500 hover:text-gray-800 hover:shadow-lg transition-all"
-          title="Выйти"
-        >
-          Выйти
-        </button>
       </div>
       {error && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 shadow-lg z-50 max-w-sm text-center">
@@ -1682,6 +1719,7 @@ export default function Home() {
           loading={loading}
           onBack={() => setScreen('case')}
           screen={screen}
+          isGuest={!user}
         />
       )}
       {screen === 'feedback' && feedback && (
