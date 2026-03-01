@@ -1182,13 +1182,13 @@ function UpgradeScreen({
                   <div className="space-y-1">
                     <div className="text-xs font-semibold text-red-500 uppercase tracking-wide">Было</div>
                     <div className="bg-red-50 border border-red-100 rounded-lg p-3 text-sm text-gray-700">
-                      {change.original}
+                      <SimpleMarkdown text={change.original} />
                     </div>
                   </div>
                   <div className="space-y-1">
                     <div className="text-xs font-semibold text-emerald-600 uppercase tracking-wide">Стало</div>
                     <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 text-sm text-gray-700">
-                      {change.improved}
+                      <SimpleMarkdown text={change.improved} />
                     </div>
                   </div>
                   <div className="flex gap-2 bg-indigo-50 border border-indigo-100 rounded-lg p-3">
