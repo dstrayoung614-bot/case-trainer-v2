@@ -1096,8 +1096,8 @@ function FeedbackScreen({
           </div>
         )}
 
-        {/* ── AI upgrade CTA (secondary) — hidden for guests ── */}
-        {!feedback.isMock && !isGuest && (
+        {/* ── AI upgrade CTA (secondary) ── */}
+        {!feedback.isMock && (
           <div className="flex items-center justify-center gap-2 py-1">
             <button
               onClick={onUpgrade}
