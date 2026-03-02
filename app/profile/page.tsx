@@ -22,8 +22,9 @@ function ScoreBadge({ score }: { score: number }) {
 // scrollable bar chart — all attempts, tooltip on hover
 function ScoreSparkline({ entries }: { entries: AttemptEntry[] }) {
   const chronological = [...entries].reverse(); // oldest → newest
+  // viewport-absolute coords so tooltip escapes overflow container
   const [tooltip, setTooltip] = useState<{
-    x: number; y: number; entry: AttemptEntry; idx: number;
+    vx: number; vy: number; entry: AttemptEntry; idx: number;
   } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -43,7 +44,22 @@ function ScoreSparkline({ entries }: { entries: AttemptEntry[] }) {
   }, [entries.length]);
 
   return (
-    <div className="relative">
+    <>
+      {/* Tooltip rendered at root via fixed positioning — not clipped by overflow */}
+      {tooltip && (
+        <div
+          className="fixed z-50 pointer-events-none"
+          style={{ left: tooltip.vx, top: tooltip.vy, transform: 'translate(-50%, -100%)' }}
+        >
+          <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-xl whitespace-nowrap space-y-0.5 mb-1">
+            <div className="font-semibold">Попытка #{tooltip.idx} · {tooltip.entry.avgScore.toFixed(1)} / 5</div>
+            <div className="text-gray-300 max-w-[200px] truncate">{tooltip.entry.caseTitle}</div>
+            <div className="text-gray-400">{new Date(tooltip.entry.ts).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+          </div>
+          <div className="w-2 h-2 bg-gray-900 rotate-45 mx-auto -mt-2" />
+        </div>
+      )}
+
       {/* Y-axis + scrollable chart */}
       <div className="flex gap-1">
         {/* Y-axis labels */}
@@ -60,7 +76,10 @@ function ScoreSparkline({ entries }: { entries: AttemptEntry[] }) {
           style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}
         >
           {/* Grid lines */}
-          <div className="absolute inset-0 flex flex-col justify-between pointer-events-none" style={{ minWidth: Math.max(chronological.length * 18, 200) }}>
+          <div
+            className="absolute inset-0 flex flex-col justify-between pointer-events-none"
+            style={{ minWidth: Math.max(chronological.length * 18, 200) }}
+          >
             {[5, 4, 3, 2, 1].map((tick) => (
               <div key={tick} className="border-t border-gray-100 w-full" />
             ))}
@@ -79,14 +98,13 @@ function ScoreSparkline({ entries }: { entries: AttemptEntry[] }) {
               return (
                 <div
                   key={i}
-                  className="flex-shrink-0 h-full flex flex-col items-center justify-end cursor-pointer group"
+                  className="flex-shrink-0 h-full flex flex-col items-center justify-end cursor-pointer"
                   style={{ width: 14 }}
                   onMouseEnter={(ev) => {
                     const rect = (ev.currentTarget as HTMLElement).getBoundingClientRect();
-                    const containerRect = containerRef.current!.getBoundingClientRect();
                     setTooltip({
-                      x: rect.left - containerRect.left + rect.width / 2,
-                      y: rect.top - containerRect.top - 8,
+                      vx: rect.left + rect.width / 2,
+                      vy: rect.top - 4,
                       entry: e,
                       idx: i + 1,
                     });
@@ -101,24 +119,9 @@ function ScoreSparkline({ entries }: { entries: AttemptEntry[] }) {
               );
             })}
           </div>
-
-          {/* Tooltip */}
-          {tooltip && (
-            <div
-              className="absolute z-20 pointer-events-none"
-              style={{ left: tooltip.x, top: tooltip.y, transform: 'translate(-50%, -100%)' }}
-            >
-              <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg whitespace-nowrap space-y-0.5">
-                <div className="font-semibold">#{tooltip.idx} · {tooltip.entry.avgScore.toFixed(1)} / 5</div>
-                <div className="text-gray-300 max-w-[180px] truncate">{tooltip.entry.caseTitle}</div>
-                <div className="text-gray-400">{new Date(tooltip.entry.ts).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
-              </div>
-              <div className="w-2 h-2 bg-gray-900 rotate-45 mx-auto -mt-1" />
-            </div>
-          )}
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
