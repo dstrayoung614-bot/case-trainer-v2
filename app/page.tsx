@@ -806,6 +806,7 @@ function FeedbackScreen({
   onFeedbackUseful,
   newBadges,
   screen,
+  isGuest,
 }: {
   feedback: FeedbackResponse;
   activeCase: Case;
