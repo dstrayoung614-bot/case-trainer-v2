@@ -52,9 +52,9 @@ function ScoreSparkline({ entries }: { entries: AttemptEntry[] }) {
           style={{ left: tooltip.vx, top: tooltip.vy, transform: 'translate(-50%, -100%)' }}
         >
           <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-xl whitespace-nowrap space-y-0.5 mb-1">
-            <div className="font-semibold">Попытка #{tooltip.idx} · {tooltip.entry.avgScore.toFixed(1)} / 5</div>
-            <div className="text-gray-300 max-w-[200px] truncate">{tooltip.entry.caseTitle}</div>
-            <div className="text-gray-400">{new Date(tooltip.entry.ts).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+            <div className="font-semibold text-white">Попытка #{tooltip.idx} · {tooltip.entry.avgScore.toFixed(1)} / 5</div>
+            <div className="text-white/80 max-w-[200px] truncate">{tooltip.entry.caseTitle || '—'}</div>
+            <div className="text-white/60">{new Date(tooltip.entry.ts).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
           </div>
           <div className="w-2 h-2 bg-gray-900 rotate-45 mx-auto -mt-2" />
         </div>
