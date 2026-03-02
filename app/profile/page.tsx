@@ -259,15 +259,21 @@ export default function ProfilePage() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-gray-800 text-sm">📈 Динамика</h2>
-            {delta !== null && (
+            {/* show change vs prev 5, or avg of last 5 if not enough data */}
+            {delta !== null ? (
               <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                 delta > 0 ? 'bg-emerald-100 text-emerald-700' :
                 delta < 0 ? 'bg-red-100 text-red-700' :
-                'bg-gray-100 text-gray-600'
+                'bg-gray-100 text-gray-500'
               }`}>
-                {delta > 0 ? '+' : ''}{delta.toFixed(1)} за последние 5
+                {delta > 0 ? `↑ +${delta.toFixed(1)}` : delta < 0 ? `↓ ${delta.toFixed(1)}` : '→ без изменений'}
+                {delta !== 0 && ' за посл. 5'}
               </span>
-            )}
+            ) : last5avg !== null ? (
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                ср. {last5avg.toFixed(1)} за посл. 5
+              </span>
+            ) : null}
           </div>
           <ScoreSparkline entries={attempts} />
           <p className="text-xs text-gray-400">Каждая полоска — одна попытка. Высота = балл (макс 5)</p>
