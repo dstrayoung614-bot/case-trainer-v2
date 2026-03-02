@@ -91,7 +91,25 @@ ${body.originalSolution}
     });
 
     const raw = completion.choices[0].message.content ?? '{}';
-    const parsed = JSON.parse(raw) as UpgradeResponse;
+    // Sanitize: remove control chars that break JSON.parse
+    const sanitized = raw
+      .replace(/[\u0000-\u001F\u007F]/g, (ch) => {
+        if (ch === '\n') return '\\n';
+        if (ch === '\r') return '\\r';
+        if (ch === '\t') return '\\t';
+        return '';
+      })
+      // Fix unescaped backslashes not followed by valid escape chars
+      .replace(/\\(?!["\\/bfnrtu])/g, '\\\\');
+    let parsed: UpgradeResponse;
+    try {
+      parsed = JSON.parse(sanitized) as UpgradeResponse;
+    } catch {
+      // Second attempt: extract JSON block if model wrapped it in markdown
+      const match = sanitized.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error(`Bad JSON from AI: ${sanitized.slice(0, 200)}`);
+      parsed = JSON.parse(match[0]) as UpgradeResponse;
+    }
 
     if (!parsed.upgradedSolution || !parsed.changes) {
       throw new Error('Invalid AI response structure');
