@@ -92,8 +92,19 @@ ${body.originalSolution}
 
     const raw = completion.choices[0].message.content ?? '{}';
 
-    // Repair JSON: only escape control chars that appear INSIDE string values
-    function repairJson(s: string): string {
+    // 1. Strip markdown code fences if model wrapped response
+    // 2. Extract JSON object
+    // 3. Fix unescaped control chars inside string values only
+    const repairJson = (s: string): string => {
+      // Strip ```json ... ``` or ``` ... ```
+      s = s.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+      // Extract outermost JSON object
+      const start = s.indexOf('{');
+      const end = s.lastIndexOf('}');
+      if (start !== -1 && end !== -1 && end > start) {
+        s = s.slice(start, end + 1);
+      }
+      // Fix unescaped control chars inside string values
       let out = '';
       let inStr = false;
       let esc = false;
@@ -109,16 +120,14 @@ ${body.originalSolution}
         out += ch;
       }
       return out;
-    }
+    };
 
     let parsed: UpgradeResponse;
     try {
       parsed = JSON.parse(repairJson(raw)) as UpgradeResponse;
-    } catch {
-      // Second attempt: extract JSON block if model wrapped it in markdown
-      const match = raw.match(/\{[\s\S]*\}/);
-      if (!match) throw new Error(`Bad JSON from AI: ${raw.slice(0, 200)}`);
-      parsed = JSON.parse(repairJson(match[0])) as UpgradeResponse;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(`Failed to parse AI JSON: ${msg}. Raw start: ${raw.slice(0, 300)}`);
     }
 
     if (!parsed.upgradedSolution || !parsed.changes) {
