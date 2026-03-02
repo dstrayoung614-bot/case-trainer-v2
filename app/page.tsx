@@ -203,44 +203,87 @@ function Stepper({ screen }: { screen: AppScreen }) {
 // renders markdown-ish text (bold **x**, headers ##, bullets -)
 function SimpleMarkdown({ text }: { text: string }) {
   const lines = text.split('\n');
-  return (
-    <div className="space-y-1">
-      {lines.map((line, i) => {
-        if (line.startsWith('## ')) {
-          return (
-            <p key={i} className="font-semibold text-gray-800 mt-3 mb-1 text-sm">
-              {line.replace('## ', '')}
-            </p>
-          );
-        }
-        if (line.startsWith('**') && line.endsWith('**')) {
-          return (
-            <p key={i} className="font-semibold text-gray-700 text-sm">
-              {line.replace(/\*\*/g, '')}
-            </p>
-          );
-        }
-        if (line.startsWith('- ') || line.startsWith('* ')) {
-          return (
-            <p key={i} className="text-sm text-gray-700 pl-3 flex gap-2">
-              <span className="text-gray-400 flex-shrink-0">•</span>
-              <span dangerouslySetInnerHTML={{ __html: line.slice(2).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
-            </p>
-          );
-        }
-        if (line.trim() === '') return <div key={i} className="h-1" />;
-        return (
-          <p
-            key={i}
-            className="text-sm text-gray-700"
-            dangerouslySetInnerHTML={{
-              __html: line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'),
-            }}
-          />
+  const output: React.ReactNode[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    // Table: collect consecutive lines starting with |
+    if (line.trimStart().startsWith('|')) {
+      const tableLines: string[] = [];
+      while (i < lines.length && lines[i].trimStart().startsWith('|')) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      const rows = tableLines
+        .filter(l => !/^\s*\|[-:\s|]+\|\s*$/.test(l)) // remove separator rows
+        .map(l =>
+          l.split('|')
+            .map(c => c.trim())
+            .filter((_, idx, arr) => idx > 0 && idx < arr.length - 1)
         );
-      })}
-    </div>
-  );
+      if (rows.length > 0) {
+        output.push(
+          <div key={i} className="overflow-x-auto my-2">
+            <table className="text-xs w-full border-collapse">
+              <thead>
+                <tr>
+                  {rows[0].map((cell, ci) => (
+                    <th key={ci} className="border border-gray-300 bg-gray-100 px-2 py-1 text-left font-semibold text-gray-700"
+                      dangerouslySetInnerHTML={{ __html: cell.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.slice(1).map((row, ri) => (
+                  <tr key={ri}>
+                    {row.map((cell, ci) => (
+                      <td key={ci} className="border border-gray-200 px-2 py-1 text-gray-700"
+                        dangerouslySetInnerHTML={{ __html: cell.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      }
+      continue;
+    }
+    if (line.startsWith('## ')) {
+      output.push(
+        <p key={i} className="font-semibold text-gray-800 mt-3 mb-1 text-sm">
+          {line.replace('## ', '')}
+        </p>
+      );
+    } else if (line.startsWith('**') && line.endsWith('**')) {
+      output.push(
+        <p key={i} className="font-semibold text-gray-700 text-sm">
+          {line.replace(/\*\*/g, '')}
+        </p>
+      );
+    } else if (line.startsWith('- ') || line.startsWith('* ')) {
+      output.push(
+        <p key={i} className="text-sm text-gray-700 pl-3 flex gap-2">
+          <span className="text-gray-400 flex-shrink-0">•</span>
+          <span dangerouslySetInnerHTML={{ __html: line.slice(2).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
+        </p>
+      );
+    } else if (line.trim() === '') {
+      output.push(<div key={i} className="h-1" />);
+    } else {
+      output.push(
+        <p
+          key={i}
+          className="text-sm text-gray-700"
+          dangerouslySetInnerHTML={{
+            __html: line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'),
+          }}
+        />
+      );
+    }
+    i++;
+  }
+  return <div className="space-y-1">{output}</div>;
 }
 
 // ─── landing ─────────────────────────────────────────────────────────────────
@@ -1193,7 +1236,7 @@ function UpgradeScreen({
                   <div className="space-y-1">
                     <div className="text-xs font-semibold text-red-500 uppercase tracking-wide">Было</div>
                     <div className="bg-red-50 border border-red-100 rounded-lg p-3 text-sm text-gray-700">
-                      <SimpleMarkdown text={change.original.replace(/^\[(.+)\]$/, '$1')} />
+                      <SimpleMarkdown text={change.original.replace(/\[не заполнено студентом\]/gi, 'не заполнено студентом')} />
                     </div>
                   </div>
                   <div className="space-y-1">
