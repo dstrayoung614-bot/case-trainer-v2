@@ -91,24 +91,34 @@ ${body.originalSolution}
     });
 
     const raw = completion.choices[0].message.content ?? '{}';
-    // Sanitize: remove control chars that break JSON.parse
-    const sanitized = raw
-      .replace(/[\u0000-\u001F\u007F]/g, (ch) => {
-        if (ch === '\n') return '\\n';
-        if (ch === '\r') return '\\r';
-        if (ch === '\t') return '\\t';
-        return '';
-      })
-      // Fix unescaped backslashes not followed by valid escape chars
-      .replace(/\\(?!["\\/bfnrtu])/g, '\\\\');
+
+    // Repair JSON: only escape control chars that appear INSIDE string values
+    function repairJson(s: string): string {
+      let out = '';
+      let inStr = false;
+      let esc = false;
+      for (const ch of s) {
+        if (esc) { out += ch; esc = false; continue; }
+        if (ch === '\\') { esc = true; out += ch; continue; }
+        if (ch === '"') { inStr = !inStr; out += ch; continue; }
+        if (inStr) {
+          if (ch === '\n') { out += '\\n'; continue; }
+          if (ch === '\r') { out += '\\r'; continue; }
+          if (ch === '\t') { out += '\\t'; continue; }
+        }
+        out += ch;
+      }
+      return out;
+    }
+
     let parsed: UpgradeResponse;
     try {
-      parsed = JSON.parse(sanitized) as UpgradeResponse;
+      parsed = JSON.parse(repairJson(raw)) as UpgradeResponse;
     } catch {
       // Second attempt: extract JSON block if model wrapped it in markdown
-      const match = sanitized.match(/\{[\s\S]*\}/);
-      if (!match) throw new Error(`Bad JSON from AI: ${sanitized.slice(0, 200)}`);
-      parsed = JSON.parse(match[0]) as UpgradeResponse;
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error(`Bad JSON from AI: ${raw.slice(0, 200)}`);
+      parsed = JSON.parse(repairJson(match[0])) as UpgradeResponse;
     }
 
     if (!parsed.upgradedSolution || !parsed.changes) {
