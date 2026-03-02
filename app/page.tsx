@@ -1193,7 +1193,7 @@ function UpgradeScreen({
                   <div className="space-y-1">
                     <div className="text-xs font-semibold text-red-500 uppercase tracking-wide">Было</div>
                     <div className="bg-red-50 border border-red-100 rounded-lg p-3 text-sm text-gray-700">
-                      <SimpleMarkdown text={change.original} />
+                      <SimpleMarkdown text={change.original.replace(/^\[(.+)\]$/, '$1')} />
                     </div>
                   </div>
                   <div className="space-y-1">
@@ -1213,7 +1213,7 @@ function UpgradeScreen({
               <h3 className="font-semibold text-white">🧠 Ключевые уроки для запоминания</h3>
               <ol className="space-y-2">
                 {(upgrade.keyLessons ?? []).filter(Boolean).map((lesson, i) => (
-                  <li key={i} className="flex gap-3 text-sm text-gray-300">
+                  <li key={i} className="flex gap-3 text-sm text-white">
                     <span className="w-5 h-5 rounded-full bg-violet-700 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">
                       {i + 1}
                     </span>
