@@ -201,8 +201,27 @@ function Stepper({ screen }: { screen: AppScreen }) {
 }
 
 // renders markdown-ish text (bold **x**, headers ##, bullets -)
+function applyInlineMarkdown(html: string): string {
+  return html
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')  // **bold**
+    .replace(/\*([^*\n]+?)\*/g, '<strong>$1</strong>')  // *bold* single asterisk
+    .replace(/\*/g, '');                                 // strip leftover asterisks
+}
+
+function preprocessText(text: string): string {
+  // Split inline numbered items "1. foo 2. bar" onto separate lines
+  return text
+    .split('\n')
+    .flatMap(line => {
+      // If line has inline "number. " patterns mid-sentence, split them
+      const parts = line.split(/(?<=\S)\s+(?=\d+\.\s)/);
+      return parts.length > 1 ? parts : [line];
+    })
+    .join('\n');
+}
+
 function SimpleMarkdown({ text }: { text: string }) {
-  const lines = text.split('\n');
+  const lines = preprocessText(text).split('\n');
   const output: React.ReactNode[] = [];
   let i = 0;
   while (i < lines.length) {
@@ -229,7 +248,7 @@ function SimpleMarkdown({ text }: { text: string }) {
                 <tr>
                   {rows[0].map((cell, ci) => (
                     <th key={ci} className="border border-gray-300 bg-gray-100 px-2 py-1 text-left font-semibold text-gray-700"
-                      dangerouslySetInnerHTML={{ __html: cell.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
+                      dangerouslySetInnerHTML={{ __html: applyInlineMarkdown(cell) }} />
                   ))}
                 </tr>
               </thead>
@@ -238,7 +257,7 @@ function SimpleMarkdown({ text }: { text: string }) {
                   <tr key={ri}>
                     {row.map((cell, ci) => (
                       <td key={ci} className="border border-gray-200 px-2 py-1 text-gray-700"
-                        dangerouslySetInnerHTML={{ __html: cell.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
+                        dangerouslySetInnerHTML={{ __html: applyInlineMarkdown(cell) }} />
                     ))}
                   </tr>
                 ))}
@@ -265,7 +284,7 @@ function SimpleMarkdown({ text }: { text: string }) {
       output.push(
         <p key={i} className="text-sm text-gray-700 pl-3 flex gap-2">
           <span className="text-gray-400 flex-shrink-0">•</span>
-          <span dangerouslySetInnerHTML={{ __html: line.slice(2).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
+          <span dangerouslySetInnerHTML={{ __html: applyInlineMarkdown(line.slice(2)) }} />
         </p>
       );
     } else if (/^\d+\.\s/.test(line)) {
@@ -274,7 +293,7 @@ function SimpleMarkdown({ text }: { text: string }) {
         output.push(
           <p key={i} className="text-sm text-gray-700 pl-3 flex gap-2">
             <span className="text-gray-500 flex-shrink-0 font-medium">{match[1]}.</span>
-            <span dangerouslySetInnerHTML={{ __html: match[2].replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
+            <span dangerouslySetInnerHTML={{ __html: applyInlineMarkdown(match[2]) }} />
           </p>
         );
       }
@@ -285,9 +304,7 @@ function SimpleMarkdown({ text }: { text: string }) {
         <p
           key={i}
           className="text-sm text-gray-700"
-          dangerouslySetInnerHTML={{
-            __html: line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'),
-          }}
+          dangerouslySetInnerHTML={{ __html: applyInlineMarkdown(line) }}
         />
       );
     }
