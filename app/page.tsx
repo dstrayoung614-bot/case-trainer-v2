@@ -332,27 +332,29 @@ function LandingScreen({
       <div className="max-w-xl w-full text-center space-y-8">
         <div className="space-y-3">
           <span className="inline-block bg-indigo-100 text-indigo-700 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wide">
-            MVP V2.0
+            AI-тренажёр для продуктовых интервью
           </span>
           <h1 className="text-4xl font-bold text-gray-900 leading-tight">
             CaseTrainer
           </h1>
           <p className="text-lg text-gray-600 leading-relaxed">
-            Тренажёр продуктовых кейсов с AI‑обратной связью.
-            Пиши ответ — получай оценку — AI докручивает до сильного уровня.
+            Реши продуктовый кейс прямо сейчас — получи AI-разбор по 6 критериям.<br />
+            <span className="text-indigo-600 font-medium">Без регистрации.</span>
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 text-center">
+        {/* How it works */}
+        <div className="grid grid-cols-3 gap-3 text-center">
           {[
-            { icon: '📝', label: '40 кейсов', sub: 'разной сложности' },
-            { icon: '📊', label: '6 критериев', sub: 'рубрики' },
-            { icon: '🤖', label: 'AI-наставник', sub: 'докручивает ответ' },
+            { icon: '📋', step: '1', label: 'Получаешь кейс', sub: 'Реальная продуктовая задача' },
+            { icon: '✍️', step: '2', label: 'Пишешь решение', sub: 'В свободной форме' },
+            { icon: '🤖', step: '3', label: 'AI разбирает', sub: 'Оценка по 6 критериям + что улучшить' },
           ].map((item) => (
-            <div key={item.label} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <div key={item.step} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 relative">
+              <div className="absolute -top-2 -left-2 bg-indigo-600 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">{item.step}</div>
               <div className="text-2xl mb-1">{item.icon}</div>
               <div className="font-semibold text-gray-800 text-sm">{item.label}</div>
-              <div className="text-xs text-gray-500">{item.sub}</div>
+              <div className="text-xs text-gray-500 mt-0.5">{item.sub}</div>
             </div>
           ))}
         </div>
@@ -362,7 +364,7 @@ function LandingScreen({
             onClick={onGuided}
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-xl transition-colors text-lg shadow-md"
           >
-            Начать с первого кейса →
+            Попробовать бесплатно →
           </button>
           <button
             onClick={onBrowse}
@@ -370,11 +372,8 @@ function LandingScreen({
           >
             Выбрать кейс из каталога
           </button>
+          <p className="text-xs text-gray-400">Без карты · Без регистрации · 1 минута</p>
         </div>
-
-        <p className="text-xs text-gray-400">
-          Прогресс сохраняется в вашем аккаунте
-        </p>
 
         {progressStats && (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-3">
@@ -767,39 +766,23 @@ function SelfReviewScreen({
             />
           </div>
 
-          {isGuest ? (
-            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-5 text-center space-y-3">
-              <div className="text-2xl">🔒</div>
-              <p className="text-sm font-semibold text-gray-800">Войдите, чтобы получить AI-фидбек</p>
-              <p className="text-xs text-gray-500">Бесплатно — оценка по 6 критериям, AI-наставник докрутит ответ</p>
-              <div className="flex gap-2">
-                <Link href="/register" className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl text-sm text-center transition-colors">
-                  Зарегистрироваться
-                </Link>
-                <Link href="/login" className="flex-1 bg-white hover:bg-gray-50 text-gray-700 font-medium py-2.5 rounded-xl text-sm text-center border border-gray-200 transition-colors">
-                  Войти
-                </Link>
-              </div>
-            </div>
-          ) : (
-            <button
-              onClick={onAnalyze}
-              disabled={loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                  </svg>
-                  Анализирую ваш ответ...
-                </>
-              ) : (
-                'Анализировать →'
-              )}
-            </button>
-          )}
+          <button
+            onClick={onAnalyze}
+            disabled={loading}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+                Анализирую ваш ответ...
+              </>
+            ) : (
+              'Анализировать →'
+            )}
+          </button>
         </div>
       </div>
     </div>
@@ -838,6 +821,7 @@ function FeedbackScreen({
   onFeedbackUseful: (v: boolean) => void;
   newBadges: BadgeMeta[];
   screen: AppScreen;
+  isGuest: boolean;
 }) {
   const avgScore =
     Object.values(feedback.scores).reduce((a, b) => a + b, 0) /
@@ -1151,21 +1135,42 @@ function FeedbackScreen({
           </div>
         </div>
 
-        {/* CTAs */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <button
-            onClick={onRetry}
-            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-xl transition-colors"
-          >
-            🔁 Попробовать снова
-          </button>
-          <button
-            onClick={onNextCase}
-            className="flex-1 bg-white hover:bg-gray-50 text-gray-700 font-medium py-4 rounded-xl transition-colors border border-gray-200"
-          >
-            Следующий кейс →
-          </button>
-        </div>
+        {/* Guest CTA — shown for unauthenticated users */}
+        {isGuest && (
+          <div className="bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-200 rounded-2xl p-6 text-center space-y-4">
+            <div className="text-3xl">🎉</div>
+            <div>
+              <p className="font-bold text-gray-900 text-base">Ты получил AI-разбор своего ответа!</p>
+              <p className="text-sm text-gray-600 mt-1">Зарегистрируйся бесплатно — сохраняй прогресс,<br />решай все 40 кейсов и смотри динамику роста</p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Link href="/register" className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl text-sm text-center transition-colors">
+                Создать аккаунт — бесплатно
+              </Link>
+              <Link href="/login" className="flex-1 bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 rounded-xl text-sm text-center border border-gray-200 transition-colors">
+                Войти
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* CTAs — hidden for guests */}
+        {!isGuest && (
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={onRetry}
+              className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-xl transition-colors"
+            >
+              🔁 Попробовать снова
+            </button>
+            <button
+              onClick={onNextCase}
+              className="flex-1 bg-white hover:bg-gray-50 text-gray-700 font-medium py-4 rounded-xl transition-colors border border-gray-200"
+            >
+              Следующий кейс →
+            </button>
+          </div>
+        )}
         <button
           onClick={onHome}
           className="w-full text-sm text-gray-400 hover:text-gray-600 py-2 pb-10 transition-colors"
@@ -1868,6 +1873,7 @@ export default function Home() {
           upgradeLoading={upgradeLoading}
           feedbackUseful={feedbackUseful}
           onFeedbackUseful={handleFeedbackUseful}
+          isGuest={!user}
           newBadges={newBadges}
           screen={screen}
         />
