@@ -1096,8 +1096,8 @@ function FeedbackScreen({
           </div>
         )}
 
-        {/* ── AI upgrade CTA (secondary) ── */}
-        {!feedback.isMock && (
+        {/* ── AI upgrade CTA (secondary) — hidden for guests ── */}
+        {!feedback.isMock && !isGuest && (
           <div className="flex items-center justify-center gap-2 py-1">
             <button
               onClick={onUpgrade}
@@ -1192,6 +1192,7 @@ function UpgradeScreen({
   onRetry,
   onNextCase,
   onHome,
+  isGuest,
 }: {
   upgrade: UpgradeResponse;
   activeCase: Case;
@@ -1199,6 +1200,7 @@ function UpgradeScreen({
   onRetry: () => void;
   onNextCase: () => void;
   onHome: () => void;
+  isGuest: boolean;
 }) {
   const [tab, setTab] = useState<'changes' | 'compare' | 'improved'>('changes');
 
@@ -1355,18 +1357,38 @@ function UpgradeScreen({
 
         {/* CTAs */}
         <div className="space-y-3 pb-10">
-          <button
-            onClick={onRetry}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-xl transition-colors"
-          >
-            ✏️ Написать заново самостоятельно
-          </button>
-          <button
-            onClick={onNextCase}
-            className="w-full bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 rounded-xl transition-colors border border-gray-200"
-          >
-            Следующий кейс →
-          </button>
+          {isGuest ? (
+            <div className="bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-200 rounded-2xl p-6 text-center space-y-4">
+              <div className="text-3xl">🎉</div>
+              <div>
+                <p className="font-bold text-gray-900 text-base">Понравилось? Продолжай расти!</p>
+                <p className="text-sm text-gray-600 mt-1">Зарегистрируйся бесплатно — решай все 40 кейсов,<br />сохраняй прогресс и смотри динамику роста</p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Link href="/register" className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl text-sm text-center transition-colors">
+                  Создать аккаунт — бесплатно
+                </Link>
+                <Link href="/login" className="flex-1 bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 rounded-xl text-sm text-center border border-gray-200 transition-colors">
+                  Войти
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={onRetry}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-xl transition-colors"
+              >
+                ✏️ Написать заново самостоятельно
+              </button>
+              <button
+                onClick={onNextCase}
+                className="w-full bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 rounded-xl transition-colors border border-gray-200"
+              >
+                Следующий кейс →
+              </button>
+            </>
+          )}
           <button
             onClick={onHome}
             className="w-full text-sm text-gray-400 hover:text-gray-600 py-2 transition-colors"
@@ -1887,6 +1909,7 @@ export default function Home() {
           onRetry={retry}
           onNextCase={nextCase}
           onHome={goHome}
+          isGuest={!user}
         />
       )}
     </>
