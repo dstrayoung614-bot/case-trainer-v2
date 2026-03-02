@@ -268,6 +268,16 @@ function SimpleMarkdown({ text }: { text: string }) {
           <span dangerouslySetInnerHTML={{ __html: line.slice(2).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
         </p>
       );
+    } else if (/^\d+\.\s/.test(line)) {
+      const match = line.match(/^(\d+)\.\s(.*)$/);
+      if (match) {
+        output.push(
+          <p key={i} className="text-sm text-gray-700 pl-3 flex gap-2">
+            <span className="text-gray-500 flex-shrink-0 font-medium">{match[1]}.</span>
+            <span dangerouslySetInnerHTML={{ __html: match[2].replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
+          </p>
+        );
+      }
     } else if (line.trim() === '') {
       output.push(<div key={i} className="h-1" />);
     } else {
