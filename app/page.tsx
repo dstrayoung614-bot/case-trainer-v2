@@ -1286,9 +1286,7 @@ function UpgradeScreen({
               </div>
               <div className="grid grid-cols-2 divide-x divide-gray-100">
                 <div className="p-5 bg-red-50/40">
-                  <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                    {originalSolution || <span className="text-gray-400 italic">Ответ не сохранён</span>}
-                  </div>
+                  <SimpleMarkdown text={originalSolution || 'Ответ не сохранён'} />
                 </div>
                 <div className="p-5 bg-emerald-50/40">
                   <SimpleMarkdown text={upgrade.upgradedSolution} />
