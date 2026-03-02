@@ -20,6 +20,27 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Sparkline chart scrollbar — always visible */
+.sparkline-scroll {
+  overflow-x: scroll;
+  scrollbar-width: thin;
+  scrollbar-color: #9ca3af #f3f4f6;
+}
+.sparkline-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.sparkline-scroll::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 3px;
+}
+.sparkline-scroll::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+  border-radius: 3px;
+}
+.sparkline-scroll::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;

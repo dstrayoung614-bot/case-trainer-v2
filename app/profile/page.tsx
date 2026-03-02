@@ -22,9 +22,8 @@ function ScoreBadge({ score }: { score: number }) {
 // scrollable bar chart — all attempts, tooltip on hover
 function ScoreSparkline({ entries }: { entries: AttemptEntry[] }) {
   const chronological = [...entries].reverse(); // oldest → newest
-  // viewport-absolute coords so tooltip escapes overflow container
   const [tooltip, setTooltip] = useState<{
-    vx: number; vy: number; entry: AttemptEntry; idx: number;
+    vx: number; vy: number; below: boolean; entry: AttemptEntry; idx: number;
   } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -45,18 +44,23 @@ function ScoreSparkline({ entries }: { entries: AttemptEntry[] }) {
 
   return (
     <>
-      {/* Tooltip rendered at root via fixed positioning — not clipped by overflow */}
+      {/* Tooltip — fixed to viewport, auto-flips below bar if near top */}
       {tooltip && (
         <div
           className="fixed z-50 pointer-events-none"
-          style={{ left: tooltip.vx, top: tooltip.vy, transform: 'translate(-50%, -100%)' }}
+          style={{
+            left: tooltip.vx,
+            top: tooltip.vy,
+            transform: tooltip.below ? 'translate(-50%, 8px)' : 'translate(-50%, -100%)',
+          }}
         >
-          <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-xl whitespace-nowrap space-y-0.5 mb-1">
-            <div className="font-semibold text-white">Попытка #{tooltip.idx} · {tooltip.entry.avgScore.toFixed(1)} / 5</div>
-            <div className="text-white/80 max-w-[200px] truncate">{tooltip.entry.caseTitle || '—'}</div>
-            <div className="text-white/60">{new Date(tooltip.entry.ts).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+          {!tooltip.below && <div className="w-2 h-2 bg-gray-900 rotate-45 mx-auto -mb-1.5 relative z-10" />}
+          <div className="bg-gray-900 rounded-lg px-3 py-2 shadow-xl whitespace-nowrap space-y-0.5" style={{ color: '#fff' }}>
+            <div style={{ fontWeight: 600, color: '#fff' }}>Попытка #{tooltip.idx} · {tooltip.entry.avgScore.toFixed(1)} / 5</div>
+            <div style={{ color: 'rgba(255,255,255,0.8)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', fontSize: 11 }}>{tooltip.entry.caseTitle || '—'}</div>
+            <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11 }}>{new Date(tooltip.entry.ts).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
           </div>
-          <div className="w-2 h-2 bg-gray-900 rotate-45 mx-auto -mt-2" />
+          {tooltip.below && <div className="w-2 h-2 bg-gray-900 rotate-45 mx-auto -mt-1.5 relative z-10" />}
         </div>
       )}
 
@@ -72,8 +76,7 @@ function ScoreSparkline({ entries }: { entries: AttemptEntry[] }) {
         {/* Scrollable bars */}
         <div
           ref={containerRef}
-          className="relative flex-1 h-24 overflow-x-auto overflow-y-hidden"
-          style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}
+          className="sparkline-scroll relative flex-1 h-24 overflow-y-hidden"
         >
           {/* Grid lines */}
           <div
@@ -102,9 +105,18 @@ function ScoreSparkline({ entries }: { entries: AttemptEntry[] }) {
                   style={{ width: 14 }}
                   onMouseEnter={(ev) => {
                     const rect = (ev.currentTarget as HTMLElement).getBoundingClientRect();
+                    const TOOLTIP_H = 80;
+                    const TOOLTIP_W = 220;
+                    const below = rect.top < TOOLTIP_H + 12;
+                    const rawVx = rect.left + rect.width / 2;
+                    const clampedVx = Math.min(
+                      Math.max(rawVx, TOOLTIP_W / 2 + 8),
+                      window.innerWidth - TOOLTIP_W / 2 - 8
+                    );
                     setTooltip({
-                      vx: rect.left + rect.width / 2,
-                      vy: rect.top - 4,
+                      vx: clampedVx,
+                      vy: below ? rect.bottom : rect.top - 4,
+                      below,
                       entry: e,
                       idx: i + 1,
                     });
