@@ -1236,7 +1236,7 @@ function UpgradeScreen({
                   <div className="space-y-1">
                     <div className="text-xs font-semibold text-red-500 uppercase tracking-wide">Было</div>
                     <div className="bg-red-50 border border-red-100 rounded-lg p-3 text-sm text-gray-700">
-                      <SimpleMarkdown text={change.original.replace(/\[не заполнено студентом\]/gi, 'не заполнено студентом')} />
+                      <SimpleMarkdown text={change.original} />
                     </div>
                   </div>
                   <div className="space-y-1">

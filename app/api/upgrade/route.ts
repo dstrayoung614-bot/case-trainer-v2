@@ -91,44 +91,7 @@ ${body.originalSolution}
     });
 
     const raw = completion.choices[0].message.content ?? '{}';
-
-    // 1. Strip markdown code fences if model wrapped response
-    // 2. Extract JSON object
-    // 3. Fix unescaped control chars inside string values only
-    const repairJson = (s: string): string => {
-      // Strip ```json ... ``` or ``` ... ```
-      s = s.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
-      // Extract outermost JSON object
-      const start = s.indexOf('{');
-      const end = s.lastIndexOf('}');
-      if (start !== -1 && end !== -1 && end > start) {
-        s = s.slice(start, end + 1);
-      }
-      // Fix unescaped control chars inside string values
-      let out = '';
-      let inStr = false;
-      let esc = false;
-      for (const ch of s) {
-        if (esc) { out += ch; esc = false; continue; }
-        if (ch === '\\') { esc = true; out += ch; continue; }
-        if (ch === '"') { inStr = !inStr; out += ch; continue; }
-        if (inStr) {
-          if (ch === '\n') { out += '\\n'; continue; }
-          if (ch === '\r') { out += '\\r'; continue; }
-          if (ch === '\t') { out += '\\t'; continue; }
-        }
-        out += ch;
-      }
-      return out;
-    };
-
-    let parsed: UpgradeResponse;
-    try {
-      parsed = JSON.parse(repairJson(raw)) as UpgradeResponse;
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      throw new Error(`Failed to parse AI JSON: ${msg}. Raw start: ${raw.slice(0, 300)}`);
-    }
+    const parsed = JSON.parse(raw) as UpgradeResponse;
 
     if (!parsed.upgradedSolution || !parsed.changes) {
       throw new Error('Invalid AI response structure');
