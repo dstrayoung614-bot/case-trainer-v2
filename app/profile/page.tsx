@@ -23,9 +23,10 @@ function ScoreBadge({ score }: { score: number }) {
 function ScoreSparkline({ entries }: { entries: AttemptEntry[] }) {
   const chronological = [...entries].reverse(); // oldest → newest
   const [tooltip, setTooltip] = useState<{
-    vx: number; vy: number; below: boolean; entry: AttemptEntry; idx: number;
+    x: number; y: number; entry: AttemptEntry; idx: number;
   } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const outerRef = useRef<HTMLDivElement>(null);
 
   const max = 5;
   const min = 1;
@@ -43,27 +44,8 @@ function ScoreSparkline({ entries }: { entries: AttemptEntry[] }) {
   }, [entries.length]);
 
   return (
-    <>
-      {/* Tooltip — fixed to viewport, auto-flips below bar if near top */}
-      {tooltip && (
-        <div
-          className="fixed z-50 pointer-events-none"
-          style={{
-            left: tooltip.vx,
-            top: tooltip.vy,
-            transform: tooltip.below ? 'translate(-50%, 8px)' : 'translate(-50%, -100%)',
-          }}
-        >
-          {!tooltip.below && <div className="w-2 h-2 bg-gray-900 rotate-45 mx-auto -mb-1.5 relative z-10" />}
-          <div className="bg-gray-900 rounded-lg px-3 py-2 shadow-xl whitespace-nowrap space-y-0.5" style={{ color: '#fff' }}>
-            <div style={{ fontWeight: 600, color: '#fff' }}>Попытка #{tooltip.idx} · {tooltip.entry.avgScore.toFixed(1)} / 5</div>
-            <div style={{ color: 'rgba(255,255,255,0.8)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', fontSize: 11 }}>{tooltip.entry.caseTitle || '—'}</div>
-            <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11 }}>{new Date(tooltip.entry.ts).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
-          </div>
-          {tooltip.below && <div className="w-2 h-2 bg-gray-900 rotate-45 mx-auto -mt-1.5 relative z-10" />}
-        </div>
-      )}
-
+    // outer: relative + overflow-visible so absolute tooltip escapes scroll container
+    <div ref={outerRef} className="relative" style={{ overflow: 'visible' }}>
       {/* Y-axis + scrollable chart */}
       <div className="flex gap-1">
         {/* Y-axis labels */}
@@ -104,36 +86,48 @@ function ScoreSparkline({ entries }: { entries: AttemptEntry[] }) {
                   className="flex-shrink-0 h-full flex flex-col items-center justify-end cursor-pointer"
                   style={{ width: 14 }}
                   onMouseEnter={(ev) => {
-                    const rect = (ev.currentTarget as HTMLElement).getBoundingClientRect();
-                    const TOOLTIP_H = 80;
-                    const TOOLTIP_W = 220;
-                    const below = rect.top < TOOLTIP_H + 12;
-                    const rawVx = rect.left + rect.width / 2;
-                    const clampedVx = Math.min(
-                      Math.max(rawVx, TOOLTIP_W / 2 + 8),
-                      window.innerWidth - TOOLTIP_W / 2 - 8
-                    );
+                    if (!outerRef.current) return;
+                    const barRect = (ev.currentTarget as HTMLElement).getBoundingClientRect();
+                    const outerRect = outerRef.current.getBoundingClientRect();
                     setTooltip({
-                      vx: clampedVx,
-                      vy: below ? rect.bottom : rect.top - 4,
-                      below,
+                      x: barRect.left - outerRect.left + barRect.width / 2,
+                      y: barRect.top - outerRect.top,
                       entry: e,
                       idx: i + 1,
                     });
                   }}
                   onMouseLeave={() => setTooltip(null)}
                 >
-                  <div
-                    className={`w-full rounded-sm transition-all ${color}`}
-                    style={{ height: `${pct}%` }}
-                  />
+                  <div className={`w-full rounded-sm transition-all ${color}`} style={{ height: `${pct}%` }} />
                 </div>
               );
             })}
           </div>
         </div>
       </div>
-    </>
+
+      {/* Tooltip — absolute sibling of scroll container, not clipped by it */}
+      {tooltip && (
+        <div
+          className="absolute z-50 pointer-events-none"
+          style={{
+            left: tooltip.x,
+            top: tooltip.y,
+            transform: 'translate(-50%, calc(-100% - 8px))',
+          }}
+        >
+          <div
+            className="rounded-lg px-3 py-2 shadow-xl whitespace-nowrap space-y-0.5"
+            style={{ background: '#111827', fontSize: 12 }}
+          >
+            <div style={{ fontWeight: 600, color: '#fff' }}>Попытка #{tooltip.idx} · {tooltip.entry.avgScore.toFixed(1)} / 5</div>
+            <div style={{ color: 'rgba(255,255,255,0.75)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>{tooltip.entry.caseTitle || '—'}</div>
+            <div style={{ color: 'rgba(255,255,255,0.55)' }}>{new Date(tooltip.entry.ts).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+          </div>
+          <div style={{ width: 8, height: 8, background: '#111827', transform: 'rotate(45deg)', margin: '-5px auto 0' }} />
+        </div>
+      )}
+    </div>
   );
 }
 
