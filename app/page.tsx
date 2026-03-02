@@ -109,6 +109,17 @@ function joinSolution(s: SolutionSections): string {
   ].filter(Boolean).join('\n\n');
 }
 
+// Для апгрейда — всегда включаем все 5 секций, пустые помечаем
+function joinSolutionFull(s: SolutionSections): string {
+  return [
+    `## Формулировка проблемы\n${s.framing || '[не заполнено студентом]'}`,
+    `## Гипотезы\n${s.hypotheses || '[не заполнено студентом]'}`,
+    `## Метрики\n${s.metrics || '[не заполнено студентом]'}`,
+    `## Действия\n${s.actions || '[не заполнено студентом]'}`,
+    `## Риски\n${s.risks || '[не заполнено студентом]'}`,
+  ].join('\n\n');
+}
+
 const STEPS = ['Кейс', 'Ответ', 'Самооценка', 'Фидбек'];
 const STEP_FOR_SCREEN: Record<AppScreen, number> = {
   landing: -1,
@@ -1201,7 +1212,7 @@ function UpgradeScreen({
             <div className="bg-gray-900 rounded-2xl p-5 space-y-3">
               <h3 className="font-semibold text-white">🧠 Ключевые уроки для запоминания</h3>
               <ol className="space-y-2">
-                {upgrade.keyLessons.map((lesson, i) => (
+                {(upgrade.keyLessons ?? []).filter(Boolean).map((lesson, i) => (
                   <li key={i} className="flex gap-3 text-sm text-gray-300">
                     <span className="w-5 h-5 rounded-full bg-violet-700 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">
                       {i + 1}
@@ -1611,7 +1622,7 @@ export default function Home() {
           caseDescription: activeCase.description,
           difficulty: activeCase.difficulty,
           skillFocus: activeCase.skillFocus,
-          originalSolution: joinSolution(solution),
+          originalSolution: joinSolutionFull(solution),
           feedback,
         }),
       });
