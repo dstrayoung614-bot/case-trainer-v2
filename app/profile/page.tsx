@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../lib/auth-context';
@@ -19,56 +19,103 @@ function ScoreBadge({ score }: { score: number }) {
   );
 }
 
-// mini sparkline bar chart (last N attempts)
+// scrollable bar chart — all attempts, tooltip on hover
 function ScoreSparkline({ entries }: { entries: AttemptEntry[] }) {
-  const recent = [...entries].reverse().slice(-12); // хронологический порядок, последние 12
-  const fillers = Math.max(0, 12 - recent.length);
-  const bars: Array<AttemptEntry | null> = [
-    ...recent,
-    ...Array.from({ length: fillers }).map(() => null),
-  ];
+  const chronological = [...entries].reverse(); // oldest → newest
+  const [tooltip, setTooltip] = useState<{
+    x: number; y: number; entry: AttemptEntry; idx: number;
+  } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const max = 5;
   const min = 1;
   const minVisiblePct = 4;
-
   const toHeightPct = (score: number) => {
     const clamped = Math.min(max, Math.max(min, score));
-    const raw = ((clamped - min) / (max - min)) * 100;
-    return Math.max(raw, minVisiblePct);
+    return Math.max(((clamped - min) / (max - min)) * 100, minVisiblePct);
   };
 
-  return (
-    <div className="h-24 grid grid-cols-[20px_1fr] gap-1">
-      <div className="h-full flex flex-col justify-between text-[10px] text-gray-700 font-semibold pointer-events-none">
-        {[5, 4, 3, 2, 1].map((tick) => (
-          <span key={tick} className="leading-none">{tick}</span>
-        ))}
-      </div>
+  // scroll to end on mount so latest attempt is visible
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollLeft = containerRef.current.scrollWidth;
+    }
+  }, [entries.length]);
 
-      <div className="relative h-full">
-        <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+  return (
+    <div className="relative">
+      {/* Y-axis + scrollable chart */}
+      <div className="flex gap-1">
+        {/* Y-axis labels */}
+        <div className="h-24 flex flex-col justify-between text-[10px] text-gray-500 font-semibold pointer-events-none flex-shrink-0 pr-1">
           {[5, 4, 3, 2, 1].map((tick) => (
-            <div key={tick} className="border-t border-gray-300" />
+            <span key={tick} className="leading-none">{tick}</span>
           ))}
         </div>
 
-        <div className="relative z-10 flex items-end gap-1 h-full">
-          {bars.map((e, i) => {
-            if (!e) {
+        {/* Scrollable bars */}
+        <div
+          ref={containerRef}
+          className="relative flex-1 h-24 overflow-x-auto overflow-y-hidden"
+          style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}
+        >
+          {/* Grid lines */}
+          <div className="absolute inset-0 flex flex-col justify-between pointer-events-none" style={{ minWidth: Math.max(chronological.length * 18, 200) }}>
+            {[5, 4, 3, 2, 1].map((tick) => (
+              <div key={tick} className="border-t border-gray-100 w-full" />
+            ))}
+          </div>
+
+          {/* Bars */}
+          <div
+            className="relative z-10 flex items-end gap-0.5 h-full px-0.5"
+            style={{ minWidth: Math.max(chronological.length * 18, 200) }}
+          >
+            {chronological.map((e, i) => {
+              const pct = toHeightPct(e.avgScore);
+              const color = e.avgScore >= 4 ? 'bg-emerald-400 hover:bg-emerald-500' :
+                            e.avgScore >= 3 ? 'bg-amber-400 hover:bg-amber-500' :
+                            'bg-red-400 hover:bg-red-500';
               return (
-                <div key={i} className="flex-1 h-full flex flex-col items-center justify-end">
-                  <div className="w-full rounded-sm bg-gray-100" style={{ height: `${minVisiblePct}%` }} />
+                <div
+                  key={i}
+                  className="flex-shrink-0 h-full flex flex-col items-center justify-end cursor-pointer group"
+                  style={{ width: 14 }}
+                  onMouseEnter={(ev) => {
+                    const rect = (ev.currentTarget as HTMLElement).getBoundingClientRect();
+                    const containerRect = containerRef.current!.getBoundingClientRect();
+                    setTooltip({
+                      x: rect.left - containerRect.left + rect.width / 2,
+                      y: rect.top - containerRect.top - 8,
+                      entry: e,
+                      idx: i + 1,
+                    });
+                  }}
+                  onMouseLeave={() => setTooltip(null)}
+                >
+                  <div
+                    className={`w-full rounded-sm transition-all ${color}`}
+                    style={{ height: `${pct}%` }}
+                  />
                 </div>
               );
-            }
-            const pct = toHeightPct(e.avgScore);
-            const color = e.avgScore >= 4 ? 'bg-emerald-400' : e.avgScore >= 3 ? 'bg-amber-400' : 'bg-red-400';
-            return (
-              <div key={i} className="flex-1 h-full flex flex-col items-center justify-end gap-0.5" title={`${e.avgScore.toFixed(1)} — ${e.caseTitle}`}>
-                <div className={`w-full rounded-sm ${color} transition-all`} style={{ height: `${pct}%` }} />
+            })}
+          </div>
+
+          {/* Tooltip */}
+          {tooltip && (
+            <div
+              className="absolute z-20 pointer-events-none"
+              style={{ left: tooltip.x, top: tooltip.y, transform: 'translate(-50%, -100%)' }}
+            >
+              <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg whitespace-nowrap space-y-0.5">
+                <div className="font-semibold">#{tooltip.idx} · {tooltip.entry.avgScore.toFixed(1)} / 5</div>
+                <div className="text-gray-300 max-w-[180px] truncate">{tooltip.entry.caseTitle}</div>
+                <div className="text-gray-400">{new Date(tooltip.entry.ts).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
               </div>
-            );
-          })}
+              <div className="w-2 h-2 bg-gray-900 rotate-45 mx-auto -mt-1" />
+            </div>
+          )}
         </div>
       </div>
     </div>
