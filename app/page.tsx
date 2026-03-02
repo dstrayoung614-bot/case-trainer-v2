@@ -1017,7 +1017,7 @@ function FeedbackScreen({
         {/* top fixes — only real feedback */}
         {!feedback.isMock && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-3">
-            <h3 className="font-semibold text-gray-800">🎯 Топ-3 для следующей итерации</h3>
+            <h3 className="font-semibold text-gray-800">🎯 Топ-3 улучшения для следующей попытки</h3>
             <ol className="space-y-2">
               {feedback.topFixes.map((fix, i) => (
                 <li key={i} className="flex gap-3 text-sm text-gray-700">
@@ -1284,11 +1284,13 @@ function UpgradeScreen({
                   <span className="text-xs font-bold text-emerald-600 uppercase tracking-wide">Улучшенный</span>
                 </div>
               </div>
-              <div className="grid grid-cols-2 divide-x divide-gray-100">
-                <div className="p-5 bg-red-50/40">
-                  <SimpleMarkdown text={originalSolution || 'Ответ не сохранён'} />
+              <div className="grid grid-cols-2 divide-x divide-gray-100 min-w-0">
+                <div className="p-5 bg-red-50/40 min-w-0 overflow-hidden">
+                  <div className="break-words">
+                    <SimpleMarkdown text={originalSolution || 'Ответ не сохранён'} />
+                  </div>
                 </div>
-                <div className="p-5 bg-emerald-50/40">
+                <div className="p-5 bg-emerald-50/40 min-w-0 overflow-hidden">
                   <SimpleMarkdown text={upgrade.upgradedSolution} />
                 </div>
               </div>
