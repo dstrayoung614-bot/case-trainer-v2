@@ -1,11 +1,86 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { motion, type Variants } from 'framer-motion';
 import { useAuth } from '../lib/auth-context';
 import { loadAttempts, AttemptEntry } from '../lib/firestore-progress';
 import { buildGamification } from '../lib/gamification';
+
+// Recharts loaded only on client (no SSR)
+const RadarChart = dynamic(() => import('recharts').then(m => m.RadarChart), { ssr: false });
+const Radar = dynamic(() => import('recharts').then(m => m.Radar), { ssr: false });
+const PolarGrid = dynamic(() => import('recharts').then(m => m.PolarGrid), { ssr: false });
+const PolarAngleAxis = dynamic(() => import('recharts').then(m => m.PolarAngleAxis), { ssr: false });
+const ResponsiveContainer = dynamic(() => import('recharts').then(m => m.ResponsiveContainer), { ssr: false });
+
+const RUBRIC_LABELS: Record<string, string> = {
+  problemFraming: 'Постановка',
+  diagnosis: 'Диагностика',
+  metricsThinking: 'Метрики',
+  prioritization: 'Приоритизация',
+  clarityStructure: 'Структура',
+  tradeOffs: 'Риски',
+};
+
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.08, duration: 0.35, ease: 'easeOut' as const } }),
+};
+
+// Radar chart of average per-dimension scores
+function CompetencyRadar({ entries }: { entries: AttemptEntry[] }) {
+  const withScores = entries.filter((e) => e.rubricScores);
+  if (withScores.length === 0) return null;
+
+  const keys = Object.keys(RUBRIC_LABELS);
+  const sums: Record<string, number> = {};
+  keys.forEach((k) => (sums[k] = 0));
+  for (const e of withScores) {
+    for (const k of keys) sums[k] += (e.rubricScores![k] ?? 0);
+  }
+  const data = keys.map((k) => ({
+    subject: RUBRIC_LABELS[k],
+    value: parseFloat((sums[k] / withScores.length).toFixed(2)),
+    fullMark: 5,
+  }));
+
+  return (
+    <ResponsiveContainer width="100%" height={220}>
+      <RadarChart data={data} margin={{ top: 10, right: 20, bottom: 10, left: 20 }}>
+        <PolarGrid stroke="#e5e7eb" />
+        <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: '#6b7280', fontFamily: 'var(--font-inter, sans-serif)' }} />
+        <Radar name="avg" dataKey="value" stroke="#6366f1" fill="#6366f1" fillOpacity={0.25} strokeWidth={2} dot={{ r: 3, fill: '#6366f1' }} />
+      </RadarChart>
+    </ResponsiveContainer>
+  );
+}
+
+// Badge grid — unlocked = full color, locked = grayscale+dim
+function BadgeWall({ badges }: { badges: ReturnType<typeof buildGamification>['badges'] }) {
+  return (
+    <div className="grid grid-cols-3 gap-3">
+      {badges.map((badge) => (
+        <div
+          key={badge.id}
+          className={`flex flex-col items-center gap-1.5 rounded-2xl border p-3 text-center transition-all ${
+            badge.unlocked
+              ? 'bg-white border-indigo-100 shadow-sm'
+              : 'bg-gray-50 border-gray-100 opacity-50 grayscale'
+          }`}
+        >
+          <div className="text-3xl">{badge.icon}</div>
+          <p className={`text-xs font-semibold leading-tight ${badge.unlocked ? 'text-gray-800' : 'text-gray-500'}`}>
+            {badge.title}
+          </p>
+          <p className="text-[10px] text-gray-400 leading-tight">{badge.progressText}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function ScoreBadge({ score }: { score: number }) {
   const color =
@@ -202,7 +277,7 @@ export default function ProfilePage() {
       <div className="max-w-2xl mx-auto space-y-6">
 
         {/* header */}
-        <div className="flex items-center justify-between">
+        <motion.div className="flex items-center justify-between" initial="hidden" animate="visible" custom={0} variants={fadeUp}>
           <Link href="/" className="text-gray-400 hover:text-gray-600 text-sm">← На главную</Link>
           <div className="flex items-center gap-4">
             <Link href="/leaderboard" className="text-xs text-gray-400 hover:text-indigo-600 transition-colors">Leaderboard</Link>
@@ -210,28 +285,49 @@ export default function ProfilePage() {
               Выйти
             </button>
           </div>
-        </div>
+        </motion.div>
 
-        <div>
+        <motion.div initial="hidden" animate="visible" custom={1} variants={fadeUp}>
           <h1 className="text-2xl font-bold text-gray-900">Мой профиль</h1>
           <p className="text-sm text-gray-500 mt-0.5">{profile?.email}</p>
-        </div>
+        </motion.div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        {/* level + readiness */}
+        <motion.div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4" initial="hidden" animate="visible" custom={2} variants={fadeUp}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Уровень</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Уровень</p>
               <p className="text-xl font-bold text-gray-900 mt-1">{game.level}</p>
             </div>
             <div className="text-right">
               <p className="text-xs text-gray-500">Лучшая серия</p>
-              <p className="text-lg font-semibold text-amber-600 mt-1">🔥 {game.longestStreakDays} дн.</p>
+              <p className={`text-lg font-semibold mt-1 ${game.longestStreakDays >= 5 ? 'text-orange-500' : 'text-amber-600'}`}>
+                🔥 {game.longestStreakDays} дн.
+              </p>
             </div>
           </div>
-        </div>
+          {totalAttempts > 0 && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-500 font-medium">Готовность к интервью</span>
+                <span className={`font-bold ${avgScore >= 4 ? 'text-emerald-600' : avgScore >= 3 ? 'text-amber-600' : 'text-red-500'}`}>
+                  {Math.round((avgScore / 5) * 100)}%
+                </span>
+              </div>
+              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <motion.div
+                  className={`h-full rounded-full ${avgScore >= 4 ? 'bg-emerald-500' : avgScore >= 3 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.round((avgScore / 5) * 100)}%` }}
+                  transition={{ duration: 0.8, ease: 'easeOut' as const, delay: 0.4 }}
+                />
+              </div>
+            </div>
+          )}
+        </motion.div>
 
         {/* stats cards */}
-        <div className="grid grid-cols-3 gap-3">
+        <motion.div className="grid grid-cols-3 gap-3" initial="hidden" animate="visible" custom={3} variants={fadeUp}>
           {[
             { value: totalAttempts, label: 'попыток' },
             { value: uniqueCases, label: 'кейсов' },
@@ -253,13 +349,12 @@ export default function ProfilePage() {
               <div className="text-xs text-gray-500 mt-0.5">{s.label}</div>
             </div>
           ))}
-        </div>
+        </motion.div>
 
         {/* dynamics */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3">
+        <motion.div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3" initial="hidden" animate="visible" custom={4} variants={fadeUp}>
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-gray-800 text-sm">📈 Динамика</h2>
-            {/* show change vs prev 5, or avg of last 5 if not enough data */}
             {delta !== null ? (
               <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                 delta > 0 ? 'bg-emerald-100 text-emerald-700' :
@@ -277,34 +372,33 @@ export default function ProfilePage() {
           </div>
           <ScoreSparkline entries={attempts} />
           <p className="text-xs text-gray-400">Каждая полоска — одна попытка. Высота = балл (макс 5)</p>
-        </div>
+        </motion.div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        {/* Competency radar */}
+        {attempts.some((e) => e.rubricScores) && (
+          <motion.div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3" initial="hidden" animate="visible" custom={5} variants={fadeUp}>
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold text-gray-800 text-sm">🕸 Карта компетенций</h2>
+              <span className="text-xs text-gray-400">среднее по {attempts.filter(e => e.rubricScores).length} попыткам</span>
+            </div>
+            <CompetencyRadar entries={attempts} />
+            <p className="text-xs text-gray-400">Показывает ваши средние баллы по каждому критерию оценки</p>
+          </motion.div>
+        )}
+
+        {/* Badge wall */}
+        <motion.div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden" initial="hidden" animate="visible" custom={6} variants={fadeUp}>
           <div className="px-5 py-4 border-b border-gray-100">
             <h2 className="font-semibold text-gray-800 text-sm">🏅 Бейджи</h2>
           </div>
-          <div className="divide-y divide-gray-50">
-            {game.badges.map((badge) => (
-              <div key={badge.id} className="px-5 py-3.5 flex items-center gap-4">
-                <div className="text-xl">{badge.icon}</div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-800">{badge.title}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{badge.description}</p>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className={`text-xs font-semibold ${badge.unlocked ? 'text-emerald-600' : 'text-gray-400'}`}>
-                    {badge.unlocked ? 'Получен' : 'В процессе'}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-0.5">{badge.progressText}</p>
-                </div>
-              </div>
-            ))}
+          <div className="p-4">
+            <BadgeWall badges={game.badges} />
           </div>
-        </div>
+        </motion.div>
 
         {/* per-case breakdown */}
         {caseStats.length > 0 && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <motion.div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden" initial="hidden" animate="visible" custom={7} variants={fadeUp}>
             <div className="px-5 py-4 border-b border-gray-100">
               <h2 className="font-semibold text-gray-800 text-sm">🗂 По кейсам</h2>
             </div>
@@ -328,12 +422,12 @@ export default function ProfilePage() {
                 </div>
               ))}
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* attempt history */}
         {attempts.length > 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <motion.div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden" initial="hidden" animate="visible" custom={8} variants={fadeUp}>
             <div className="px-5 py-4 border-b border-gray-100">
               <h2 className="font-semibold text-gray-800 text-sm">🕐 История попыток</h2>
             </div>
@@ -353,15 +447,15 @@ export default function ProfilePage() {
                 </div>
               ))}
             </div>
-          </div>
+          </motion.div>
         ) : (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 text-center space-y-3">
+          <motion.div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 text-center space-y-3" initial="hidden" animate="visible" custom={8} variants={fadeUp}>
             <p className="text-3xl">📭</p>
             <p className="text-gray-500 text-sm">Попыток ещё нет</p>
             <Link href="/" className="inline-block text-sm text-indigo-600 font-medium hover:underline">
               Начать первый кейс →
             </Link>
-          </div>
+          </motion.div>
         )}
       </div>
     </div>

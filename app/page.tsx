@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { cases, guidedStarterCase, getRandomCase } from './lib/cases';
 import { useAuth } from './lib/auth-context';
 import { saveAttempt, loadAttempts, calcStats } from './lib/firestore-progress';
@@ -327,10 +328,14 @@ function LandingScreen({
   onResetProgress: () => void;
 }) {
   const [confirmReset, setConfirmReset] = useState(false);
+  const fadeUp: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.1, duration: 0.4, ease: 'easeOut' as const } }),
+  };
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-16 bg-gradient-to-br from-slate-50 to-indigo-50">
       <div className="max-w-xl w-full text-center space-y-8">
-        <div className="space-y-3">
+        <motion.div className="space-y-3" initial="hidden" animate="visible" custom={0} variants={fadeUp}>
           <span className="inline-block bg-indigo-100 text-indigo-700 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wide">
             AI-тренажёр для продуктовых интервью
           </span>
@@ -341,10 +346,10 @@ function LandingScreen({
             Реши продуктовый кейс прямо сейчас — получи AI-разбор по 6 критериям.<br />
             <span className="text-indigo-600 font-medium">Без регистрации.</span>
           </p>
-        </div>
+        </motion.div>
 
         {/* How it works */}
-        <div className="grid grid-cols-3 gap-3 text-center">
+        <motion.div className="grid grid-cols-3 gap-3 text-center" initial="hidden" animate="visible" custom={1} variants={fadeUp}>
           {[
             { icon: '📋', step: '1', label: 'Получаешь кейс', sub: 'Реальная продуктовая задача' },
             { icon: '✍️', step: '2', label: 'Пишешь решение', sub: 'В свободной форме' },
@@ -357,9 +362,50 @@ function LandingScreen({
               <div className="text-xs text-gray-500 mt-0.5">{item.sub}</div>
             </div>
           ))}
-        </div>
+        </motion.div>
 
-        <div className="space-y-3">
+        {/* Preview card — sample feedback */}
+        <motion.div
+          className="bg-white rounded-2xl border border-indigo-100 shadow-sm p-5 text-left space-y-3"
+          initial="hidden" animate="visible" custom={2} variants={fadeUp}
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Пример AI-разбора</p>
+            <span className="text-xs bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full">3.8 / 5</span>
+          </div>
+          <div className="space-y-2">
+            {[
+              { label: 'Формулировка проблемы', score: 4 },
+              { label: 'Метрики', score: 3 },
+              { label: 'Приоритизация', score: 4 },
+            ].map((item, idx) => (
+              <div key={item.label} className="flex items-center gap-3">
+                <span className="text-xs text-gray-600 w-44 flex-shrink-0">{item.label}</span>
+                <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <motion.div
+                    className={`h-full rounded-full ${item.score >= 4 ? 'bg-emerald-500' : 'bg-amber-400'}`}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(item.score / 5) * 100}%` }}
+                    transition={{ duration: 0.7, ease: 'easeOut' as const, delay: 0.6 + idx * 0.1 }}
+                  />
+                </div>
+                <span className="text-xs font-semibold text-gray-700 w-6 text-right">{item.score}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-gray-500 bg-amber-50 rounded-lg px-3 py-2 border border-amber-100">
+            💡 <strong>Главное улучшение:</strong> Добавь guardrail-метрики рядом с north star — это покажет системное мышление
+          </p>
+        </motion.div>
+
+        <motion.div className="space-y-3" initial="hidden" animate="visible" custom={3} variants={fadeUp}>
+          {/* Social proof */}
+          <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400">
+            <span>⭐⭐⭐⭐⭐</span>
+            <span className="font-medium text-gray-600">2 000+ разборов</span>
+            <span>·</span>
+            <span>продактам по всей России</span>
+          </div>
           <button
             onClick={onGuided}
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-xl transition-colors text-lg shadow-md"
@@ -373,10 +419,10 @@ function LandingScreen({
             Выбрать кейс из каталога
           </button>
           <p className="text-xs text-gray-400">Без карты · Без регистрации · 1 минута</p>
-        </div>
+        </motion.div>
 
         {progressStats && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-3">
+          <motion.div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-3" initial="hidden" animate="visible" custom={4} variants={fadeUp}>
             <div className="flex items-center justify-between">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">📊 Ваш прогресс</p>
               {!confirmReset ? (
@@ -421,7 +467,7 @@ function LandingScreen({
                 <div className="text-xs text-gray-500">ср. балл</div>
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
       </div>
     </div>
@@ -791,6 +837,91 @@ function SelfReviewScreen({
 
 // ─── feedback ─────────────────────────────────────────────────────────────────
 
+// Skeleton pulsing card
+function SkeletonBlock({ className = '' }: { className?: string }) {
+  return <div className={`bg-gray-200 rounded-xl animate-pulse ${className}`} />;
+}
+
+function FeedbackSkeletonScreen({ screen }: { screen: AppScreen }) {
+  return (
+    <div className="min-h-screen bg-gray-50 px-4 py-10">
+      <div className="max-w-2xl mx-auto space-y-5">
+        <Stepper screen={screen} />
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
+          <SkeletonBlock className="h-7 w-48" />
+          <SkeletonBlock className="h-5 w-64" />
+          <div className="bg-gray-50 rounded-xl p-4 flex items-center gap-5">
+            <SkeletonBlock className="h-14 w-14 rounded-2xl" />
+            <div className="space-y-2 flex-1">
+              <SkeletonBlock className="h-5 w-32" />
+              <SkeletonBlock className="h-4 w-48" />
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
+          <SkeletonBlock className="h-5 w-32" />
+          {[1,2,3,4,5,6].map((i) => (
+            <div key={i} className="flex items-center justify-between gap-4">
+              <SkeletonBlock className="h-4 w-40" />
+              <SkeletonBlock className="h-3 flex-1 max-w-[180px]" />
+            </div>
+          ))}
+        </div>
+        <div className="bg-emerald-50 rounded-2xl p-5 space-y-3">
+          <SkeletonBlock className="h-5 w-36" />
+          <SkeletonBlock className="h-4 w-full" />
+          <SkeletonBlock className="h-4 w-5/6" />
+        </div>
+        <div className="bg-amber-50 rounded-2xl p-5 space-y-3">
+          <SkeletonBlock className="h-5 w-36" />
+          <SkeletonBlock className="h-4 w-full" />
+          <SkeletonBlock className="h-4 w-4/5" />
+          <SkeletonBlock className="h-4 w-3/4" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Animated rubric bar — fills from 0 to (score/5)*100% on mount
+function AnimatedRubricBar({ score, delay = 0 }: { score: number; delay?: number }) {
+  const pct = (score / 5) * 100;
+  const color = score >= 4 ? 'bg-emerald-500' : score >= 3 ? 'bg-amber-500' : 'bg-rose-500';
+  return (
+    <div className="flex items-center gap-2 flex-1">
+      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden max-w-[180px]">
+        <motion.div
+          className={`h-full rounded-full ${color}`}
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.6, ease: 'easeOut' as const, delay }}
+        />
+      </div>
+      <span className="text-sm font-semibold text-gray-900 w-8 text-right">{score}/5</span>
+    </div>
+  );
+}
+
+// Count-up animated score number
+function AnimatedScore({ value }: { value: number }) {
+  const [display, setDisplay] = useState(0);
+  useEffect(() => {
+    let start = 0;
+    const end = value;
+    const duration = 800;
+    const steps = 30;
+    const increment = end / steps;
+    const intervalMs = duration / steps;
+    const timer = setInterval(() => {
+      start += increment;
+      if (start >= end) { setDisplay(end); clearInterval(timer); }
+      else setDisplay(parseFloat(start.toFixed(1)));
+    }, intervalMs);
+    return () => clearInterval(timer);
+  }, [value]);
+  return <>{display.toFixed(1)}</>;
+}
+
 function FeedbackScreen({
   feedback,
   activeCase,
@@ -889,13 +1020,20 @@ function FeedbackScreen({
           </div>
 
           {!feedback.isMock && (
-            <div className="flex items-center gap-5 bg-gray-50 rounded-xl p-4">
-              <div className="text-5xl font-bold text-gray-900">{avgScore.toFixed(1)}</div>
+            <motion.div
+              className="flex items-center gap-5 bg-gray-50 rounded-xl p-4"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4, delay: 0.1 }}
+            >
+              <div className="text-5xl font-bold text-gray-900">
+                <AnimatedScore value={avgScore} />
+              </div>
               <div>
                 <div className={`font-semibold text-base ${scoreLabel.color}`}>{scoreLabel.text}</div>
                 <div className="text-xs text-gray-500 mt-0.5">средний балл из 5.0 по 6 критериям</div>
               </div>
-            </div>
+            </motion.div>
           )}
         </div>
 
@@ -978,12 +1116,12 @@ function FeedbackScreen({
             {feedback.isMock && <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">доступно после подключения AI</span>}
           </div>
           <div className="space-y-3">
-            {(Object.entries(feedback.scores) as [keyof RubricScores, number][]).map(([key, score]) => (
+            {(Object.entries(feedback.scores) as [keyof RubricScores, number][]).map(([key, score], idx) => (
               <div key={key} className="flex items-center justify-between">
                 <span className="text-sm text-gray-700 w-48">{RUBRIC_LABELS[key]}</span>
                 {feedback.isMock
                   ? <div className="flex gap-1">{[1,2,3,4,5].map(i => <div key={i} className="w-5 h-5 rounded-sm bg-gray-200" />)}</div>
-                  : <ScoreBar score={score} />}
+                  : <AnimatedRubricBar score={score} delay={idx * 0.07} />}
               </div>
             ))}
           </div>
@@ -1679,6 +1817,7 @@ export default function Home() {
           caseTitle: activeCase.title,
           avgScore: avg,
           confidence: selfReview.confidence,
+          rubricScores: data.scores as Record<string, number>,
         });
 
         const afterEntries = await loadAttempts(user.uid);
@@ -1871,7 +2010,10 @@ export default function Home() {
           screen={screen}
         />
       )}
-      {screen === 'self-review' && (
+      {screen === 'self-review' && loading && (
+        <FeedbackSkeletonScreen screen={screen} />
+      )}
+      {screen === 'self-review' && !loading && (
         <SelfReviewScreen
           selfReview={selfReview}
           setSelfReview={setSelfReview}
