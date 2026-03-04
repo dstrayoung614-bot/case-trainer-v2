@@ -7,7 +7,6 @@ type LeaderboardEntry = {
   rank: number;
   uid: string;
   name: string;
-  email: string;
   avgScore: number;
   totalAttempts: number;
   uniqueCases: number;

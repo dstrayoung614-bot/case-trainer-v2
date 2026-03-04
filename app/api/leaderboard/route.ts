@@ -8,7 +8,6 @@ export const dynamic = 'force-dynamic';
 type LeaderboardItem = {
   uid: string;
   name: string;
-  email: string;
   avgScore: number;
   totalAttempts: number;
   uniqueCases: number;
@@ -54,7 +53,6 @@ export async function GET() {
         const row: LeaderboardItem = {
           uid: userDoc.id,
           name: displayName || fallback,
-          email,
           avgScore: game.avgScore,
           totalAttempts: game.totalAttempts,
           uniqueCases: game.uniqueCases,

@@ -183,9 +183,12 @@ export function getAllBadgeMeta(): BadgeMeta[] {
 
 export function buildGamification(attempts: AttemptEntry[]): GamificationSnapshot {
   const totalAttempts = attempts.length;
+  // Считаем avgScore только по попыткам с ненулевым баллом,
+  // чтобы старые/битые записи не занижали средний показатель
+  const scoredAttempts = attempts.filter((e) => e.avgScore > 0);
   const avgScore =
-    totalAttempts > 0
-      ? attempts.reduce((sum, entry) => sum + entry.avgScore, 0) / totalAttempts
+    scoredAttempts.length > 0
+      ? scoredAttempts.reduce((sum, entry) => sum + entry.avgScore, 0) / scoredAttempts.length
       : 0;
   const uniqueCaseIds = new Set(attempts.map((entry) => entry.caseId));
   const uniqueCases = uniqueCaseIds.size;

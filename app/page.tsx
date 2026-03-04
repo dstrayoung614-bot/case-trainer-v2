@@ -1879,7 +1879,9 @@ export default function Home() {
   const requestUpgrade = useCallback(async () => {
     if (!feedback) return;
     track('upgrade_clicked', { caseId: activeCase.id, attemptNumber });
+    setUpgrade(null);        // сбрасываем старые данные
     setUpgradeLoading(true);
+    setScreen('upgrade');    // сразу переходим на экран апгрейда — скелетон виден
     setError(null);
 
     try {
@@ -2058,8 +2060,8 @@ export default function Home() {
           isGuest={!user}
         />
       )}
-      {screen === 'feedback' && upgradeLoading && (
-        <UpgradeLoadingScreen activeCase={activeCase} screen={screen} />
+      {screen === 'upgrade' && upgradeLoading && (
+        <UpgradeLoadingScreen activeCase={activeCase} screen='upgrade' />
       )}
       {screen === 'feedback' && feedback && !upgradeLoading && (
         <FeedbackScreen
