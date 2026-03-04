@@ -74,6 +74,38 @@ export async function POST(req: NextRequest) {
       throw new Error('Invalid AI response structure');
     }
 
+    // Гарантируем: каждый критерий с баллом ≤ 2 должен быть в issues.
+    // Это защита от AI-лимита «не более 4 пунктов».
+    const DIMENSION_FALLBACKS: Record<string, { label: string; whyItMatters: string }> = {
+      problemFraming:   { label: 'Формулировка проблемы',  whyItMatters: 'Без чёткого определения проблемы невозможно двигаться дальше — интервьюер должен видеть, что вы понимаете задачу.' },
+      diagnosis:        { label: 'Диагностика',            whyItMatters: 'Гипотезы о причинах — ключевой этап анализа; без них решение будет поверхностным.' },
+      metricsThinking:  { label: 'Метрики',                whyItMatters: 'Правильные метрики показывают системное мышление и умение измерять влияние решений.' },
+      prioritization:   { label: 'Приоритизация',          whyItMatters: 'Обоснование приоритетов демонстрирует понимание impact/effort/risk и зрелость продуктового мышления.' },
+      clarityStructure: { label: 'Структура и ясность',   whyItMatters: 'Чёткая структура помогает интервьюеру следить за ходом мысли и оценивать логику кандидата.' },
+      tradeOffs:        { label: 'Компромиссы и риски',   whyItMatters: 'Учёт рисков и trade-offs отличает опытного продакта от джуниора — реальные решения всегда содержат компромиссы.' },
+    };
+
+    const normalise = (s: string) => s.toLowerCase().replace(/[\s_-]/g, '');
+    const coveredDimensions = new Set(
+      (parsed.issues ?? []).map((iss) => normalise(iss.dimension))
+    );
+
+    const fallbackIssues: typeof parsed.issues = [];
+    for (const [dimKey, meta] of Object.entries(DIMENSION_FALLBACKS)) {
+      const score = (parsed.scores as Record<string, number>)[dimKey] ?? 5;
+      if (score <= 2 && !coveredDimensions.has(normalise(dimKey)) && !coveredDimensions.has(normalise(meta.label))) {
+        fallbackIssues.push({
+          dimension: dimKey,
+          issue: `Критерий «${meta.label}» не раскрыт в ответе (оценка: ${score}/5).`,
+          whyItMatters: meta.whyItMatters,
+        });
+      }
+    }
+
+    if (fallbackIssues.length > 0) {
+      parsed.issues = [...(parsed.issues ?? []), ...fallbackIssues];
+    }
+
     return NextResponse.json(parsed, { status: 200 });
   } catch (err) {
     console.error('[analyze] error:', err);
@@ -127,7 +159,7 @@ ${RUBRIC_DIMENSIONS}
 
 Будь конкретным — используй цитаты и примеры из ответа пользователя.
 Укажи 2-3 реальные сильные стороны.
-Если ответ сильный — укажи 1-2 точки роста максимум. Если слабый — до 4.
+Если ответ сильный — укажи 1-2 точки роста. Если слабый — укажи КАЖДЫЙ критерий с баллом 1-2, без ограничения по количеству.
 НЕ придумывай проблемы ради заполнения списка.
 `;
 }
