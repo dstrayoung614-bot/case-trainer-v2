@@ -4,6 +4,7 @@ import { adminAuth, adminDb } from '@/app/lib/firebase-admin';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
+  if (!adminAuth || !adminDb) return NextResponse.json({ error: 'Auth not configured' }, { status: 503 });
   // 1. Проверяем сессию
   const session = req.cookies.get('session')?.value;
   if (!session) {

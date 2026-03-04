@@ -16,6 +16,7 @@ type LeaderboardItem = {
 };
 
 export async function GET() {
+  if (!adminDb) return NextResponse.json({ leaderboard: [] });
   try {
     const usersSnap = await adminDb.collection('users').get();
 

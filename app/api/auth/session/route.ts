@@ -3,6 +3,7 @@ import { adminAuth } from '@/app/lib/firebase-admin';
 
 // POST /api/auth/session — создаёт сессионную куку
 export async function POST(req: NextRequest) {
+  if (!adminAuth) return NextResponse.json({ error: 'Auth not configured' }, { status: 503 });
   try {
     const { idToken } = await req.json();
     if (!idToken) return NextResponse.json({ error: 'No token' }, { status: 400 });
