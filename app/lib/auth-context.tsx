@@ -38,9 +38,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!auth) { setLoading(false); return; }
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
-      if (firebaseUser) {
+      if (firebaseUser && db) {
         const snap = await getDoc(doc(db, 'users', firebaseUser.uid));
         setProfile(snap.exists() ? (snap.data() as UserProfile) : null);
       } else {
@@ -61,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signUp(email: string, password: string, displayName: string) {
+    if (!auth || !db) throw new Error('Firebase не инициализирован');
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     const newProfile: UserProfile = {
       uid: cred.user.uid,
@@ -75,11 +77,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signIn(email: string, password: string) {
+    if (!auth) throw new Error('Firebase не инициализирован');
     const cred = await signInWithEmailAndPassword(auth, email, password);
     await createSession(cred.user);
   }
 
   async function logOut() {
+    if (!auth) return;
     await fetch('/api/auth/session', { method: 'DELETE' });
     await signOut(auth);
     setProfile(null);

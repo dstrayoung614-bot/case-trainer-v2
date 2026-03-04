@@ -18,6 +18,7 @@ export interface AttemptEntry {
 }
 
 export async function saveAttempt(uid: string, entry: Omit<AttemptEntry, 'ts'>) {
+  if (!db) throw new Error('Firestore не инициализирован');
   await addDoc(collection(db, 'users', uid, 'attempts'), {
     ...entry,
     ts: serverTimestamp(),
@@ -25,6 +26,7 @@ export async function saveAttempt(uid: string, entry: Omit<AttemptEntry, 'ts'>) 
 }
 
 export async function loadAttempts(uid: string): Promise<AttemptEntry[]> {
+  if (!db) return [];
   const q = query(
     collection(db, 'users', uid, 'attempts'),
     orderBy('ts', 'desc')
