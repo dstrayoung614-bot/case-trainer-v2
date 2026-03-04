@@ -17,13 +17,14 @@ type LeaderboardItem = {
 
 export async function GET() {
   if (!adminDb) return NextResponse.json({ leaderboard: [] });
+  const db = adminDb; // capture non-null reference for use inside async callbacks
   try {
-    const usersSnap = await adminDb.collection('users').get();
+    const usersSnap = await db.collection('users').get();
 
     const rows = await Promise.all(
       usersSnap.docs.map(async (userDoc) => {
         const userData = userDoc.data();
-        const attemptsSnap = await adminDb
+        const attemptsSnap = await db
           .collection('users')
           .doc(userDoc.id)
           .collection('attempts')

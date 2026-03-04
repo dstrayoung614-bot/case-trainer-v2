@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   if (!adminAuth || !adminDb) return NextResponse.json({ error: 'Auth not configured' }, { status: 503 });
+  const db = adminDb; // capture non-null reference for use inside async callbacks
   // 1. Проверяем сессию
   const session = req.cookies.get('session')?.value;
   if (!session) {
@@ -16,20 +17,20 @@ export async function GET(req: NextRequest) {
     const decoded = await adminAuth.verifySessionCookie(session, true);
 
     // 3. Проверяем роль в Firestore
-    const requesterDoc = await adminDb.doc(`users/${decoded.uid}`).get();
+    const requesterDoc = await db.doc(`users/${decoded.uid}`).get();
     if (!requesterDoc.exists || requesterDoc.data()?.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // 4. Получаем всех пользователей
-    const usersSnap = await adminDb.collection('users').orderBy('createdAt', 'desc').get();
+    const usersSnap = await db.collection('users').orderBy('createdAt', 'desc').get();
 
     const users = await Promise.all(
       usersSnap.docs.map(async (userDoc) => {
         const userData = userDoc.data();
 
         // Получаем попытки пользователя
-        const attemptsSnap = await adminDb
+        const attemptsSnap = await db
           .collection('users')
           .doc(userDoc.id)
           .collection('attempts')
