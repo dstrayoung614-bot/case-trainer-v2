@@ -237,11 +237,10 @@ export default function ProfilePage() {
   }
 
   const totalAttempts = attempts.length;
-  const avgScore = totalAttempts > 0
-    ? attempts.reduce((a, b) => a + b.avgScore, 0) / totalAttempts
-    : 0;
   const uniqueCases = new Set(attempts.map((e) => e.caseId)).size;
   const game = buildGamification(attempts);
+  // avgScore из buildGamification — уже фильтрует попытки с нулевым баллом
+  const avgScore = game.avgScore;
 
   // динамика: последние 5 vs предыдущие 5
   const chronological = [...attempts].reverse();
