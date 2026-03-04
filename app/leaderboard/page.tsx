@@ -78,7 +78,6 @@ export default function LeaderboardPage() {
                     <div className="col-span-1 font-semibold text-gray-700">{row.rank}</div>
                     <div className="col-span-4 min-w-0">
                       <p className="font-medium text-gray-800 truncate">{row.name}</p>
-                      <p className="text-xs text-gray-400 truncate">{row.email}</p>
                     </div>
                     <div className={`col-span-2 text-right font-semibold ${
                       row.avgScore >= 4 ? 'text-emerald-600' : row.avgScore >= 3 ? 'text-amber-600' : 'text-red-500'

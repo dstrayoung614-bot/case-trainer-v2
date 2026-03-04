@@ -399,13 +399,6 @@ function LandingScreen({
         </motion.div>
 
         <motion.div className="space-y-3" initial="hidden" animate="visible" custom={3} variants={fadeUp}>
-          {/* Social proof */}
-          <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400">
-            <span>⭐⭐⭐⭐⭐</span>
-            <span className="font-medium text-gray-600">2 000+ разборов</span>
-            <span>·</span>
-            <span>продактам по всей России</span>
-          </div>
           <button
             onClick={onGuided}
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-xl transition-colors text-lg shadow-md"
@@ -840,6 +833,45 @@ function SelfReviewScreen({
 // Skeleton pulsing card
 function SkeletonBlock({ className = '' }: { className?: string }) {
   return <div className={`bg-gray-200 rounded-xl animate-pulse ${className}`} />;
+}
+
+function UpgradeLoadingScreen({ activeCase, screen }: { activeCase: Case; screen: AppScreen }) {
+  return (
+    <div className="min-h-screen bg-gray-50 px-4 py-10">
+      <div className="max-w-2xl mx-auto space-y-5">
+        <Stepper screen={screen} />
+        <div className="bg-gradient-to-br from-violet-600 to-indigo-600 rounded-2xl p-6 text-white space-y-2">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">🤖</span>
+            <div>
+              <h2 className="text-xl font-bold">AI дорабатывает ваш ответ…</h2>
+              <p className="text-violet-200 text-sm mt-0.5">{activeCase.title}</p>
+            </div>
+          </div>
+          <p className="text-sm text-violet-100 leading-relaxed">
+            Это займёт 20–40 секунд. AI разберёт каждый раздел и покажет конкретные улучшения.
+          </p>
+        </div>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
+          <SkeletonBlock className="h-5 w-32" />
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-gray-50 rounded-xl p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <SkeletonBlock className="h-5 w-5 rounded-full" />
+                <SkeletonBlock className="h-4 w-36" />
+              </div>
+              <SkeletonBlock className="h-10 w-full" />
+              <SkeletonBlock className="h-10 w-full" />
+            </div>
+          ))}
+        </div>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex items-center gap-4">
+          <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+          <p className="text-sm text-gray-600">Анализирую ваш ответ и готовлю объяснения…</p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function FeedbackSkeletonScreen({ screen }: { screen: AppScreen }) {
@@ -1812,13 +1844,15 @@ export default function Home() {
         const beforeEntries = await loadAttempts(user.uid);
         const before = buildGamification(beforeEntries);
 
-        await saveAttempt(user.uid, {
-          caseId: activeCase.id,
-          caseTitle: activeCase.title,
-          avgScore: avg,
-          confidence: selfReview.confidence,
-          rubricScores: data.scores as Record<string, number>,
-        });
+        if (!data.isMock) {
+          await saveAttempt(user.uid, {
+            caseId: activeCase.id,
+            caseTitle: activeCase.title,
+            avgScore: avg,
+            confidence: selfReview.confidence,
+            rubricScores: data.scores as Record<string, number>,
+          });
+        }
 
         const afterEntries = await loadAttempts(user.uid);
         const after = buildGamification(afterEntries);
@@ -2024,7 +2058,10 @@ export default function Home() {
           isGuest={!user}
         />
       )}
-      {screen === 'feedback' && feedback && (
+      {screen === 'feedback' && upgradeLoading && (
+        <UpgradeLoadingScreen activeCase={activeCase} screen={screen} />
+      )}
+      {screen === 'feedback' && feedback && !upgradeLoading && (
         <FeedbackScreen
           feedback={feedback}
           activeCase={activeCase}
