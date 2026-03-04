@@ -970,6 +970,7 @@ function FeedbackScreen({
   newBadges,
   screen,
   isGuest,
+  guestUpgradeUsed,
 }: {
   feedback: FeedbackResponse;
   activeCase: Case;
@@ -986,6 +987,7 @@ function FeedbackScreen({
   newBadges: BadgeMeta[];
   screen: AppScreen;
   isGuest: boolean;
+  guestUpgradeUsed: boolean;
 }) {
   const avgScore =
     Object.values(feedback.scores).reduce((a, b) => a + b, 0) /
@@ -1269,13 +1271,22 @@ function FeedbackScreen({
         {/* ── AI upgrade CTA (secondary) ── */}
         {!feedback.isMock && (
           <div className="flex items-center justify-center gap-2 py-1">
-            <button
-              onClick={onUpgrade}
-              disabled={upgradeLoading}
-              className="text-sm text-violet-600 hover:text-violet-800 font-medium underline decoration-dotted disabled:opacity-50 flex items-center gap-1"
-            >
-              {upgradeLoading ? '✨ AI дорабатывает...' : '✨ Улучшить мой ответ с помощью AI'}
-            </button>
+            {isGuest && guestUpgradeUsed ? (
+              <Link
+                href="/register"
+                className="text-sm text-indigo-600 hover:text-indigo-800 font-medium underline decoration-dotted flex items-center gap-1"
+              >
+                ✨ Зарегистрируйся, чтобы улучшить этот ответ
+              </Link>
+            ) : (
+              <button
+                onClick={onUpgrade}
+                disabled={upgradeLoading}
+                className="text-sm text-violet-600 hover:text-violet-800 font-medium underline decoration-dotted disabled:opacity-50 flex items-center gap-1"
+              >
+                {upgradeLoading ? '✨ AI дорабатывает...' : '✨ Улучшить мой ответ с помощью AI'}
+              </button>
+            )}
           </div>
         )}
 
@@ -1757,6 +1768,10 @@ export default function Home() {
   const [progressStats, setProgressStats] = useState<{ total: number; avgScore: number; uniqueCases: number } | null>(null);
   const [newBadges, setNewBadges] = useState<BadgeMeta[]>([]);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  // гость может использовать апгрейд только один раз
+  const [guestUpgradeUsed, setGuestUpgradeUsed] = useState(() =>
+    typeof window !== 'undefined' && !!localStorage.getItem('ct_guest_upgraded')
+  );
 
   // Онбординг — показываем один раз новым пользователям
   useEffect(() => {
@@ -1905,6 +1920,11 @@ export default function Home() {
       }
       const data: UpgradeResponse = await res.json();
       track('upgrade_received', { caseId: activeCase.id });
+      // запоминаем что гость уже воспользовался апгрейдом
+      if (!user && typeof window !== 'undefined') {
+        localStorage.setItem('ct_guest_upgraded', '1');
+        setGuestUpgradeUsed(true);
+      }
       setUpgrade(data);
       setScreen('upgrade');
     } catch (err) {
@@ -2078,6 +2098,7 @@ export default function Home() {
           feedbackUseful={feedbackUseful}
           onFeedbackUseful={handleFeedbackUseful}
           isGuest={!user}
+          guestUpgradeUsed={guestUpgradeUsed}
           newBadges={newBadges}
           screen={screen}
         />
