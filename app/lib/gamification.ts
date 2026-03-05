@@ -1,7 +1,7 @@
 import { cases } from './cases';
 import { AttemptEntry } from './firestore-progress';
 
-export type LevelName = 'Новичок' | 'Стажёр' | 'Специалист' | 'Эксперт' | 'Мастер';
+export type LevelName = 'Новичок' | 'Любитель' | 'Практик' | 'Специалист' | 'Эксперт' | 'Мастер';
 
 export type BadgeId =
   | 'first_case'
@@ -36,15 +36,17 @@ export type GamificationSnapshot = {
 
 type LevelRule = {
   level: LevelName;
-  minAttempts: number;
+  minUniqueCases: number;
 };
 
+// Уровни привязаны к уникальным кейсам из 40
 const LEVELS: LevelRule[] = [
-  { level: 'Новичок', minAttempts: 0 },
-  { level: 'Стажёр', minAttempts: 3 },
-  { level: 'Специалист', minAttempts: 8 },
-  { level: 'Эксперт', minAttempts: 15 },
-  { level: 'Мастер', minAttempts: 25 },
+  { level: 'Новичок',    minUniqueCases: 0  },  // 0 кейсов
+  { level: 'Любитель',  minUniqueCases: 1  },  // 1–4 кейса
+  { level: 'Практик',   minUniqueCases: 5  },  // 5–9 кейсов
+  { level: 'Специалист',minUniqueCases: 10 },  // 10–19 кейсов
+  { level: 'Эксперт',   minUniqueCases: 20 },  // 20–29 кейсов
+  { level: 'Мастер',    minUniqueCases: 30 },  // 30–40 кейсов
 ];
 
 const BADGES: BadgeMeta[] = [
@@ -134,10 +136,10 @@ function getCurrentStreak(entries: AttemptEntry[]): number {
   return streak;
 }
 
-function getLevel(totalAttempts: number): LevelName {
+function getLevel(uniqueCasesCount: number): LevelName {
   let current = LEVELS[0].level;
   for (const rule of LEVELS) {
-    if (totalAttempts >= rule.minAttempts) {
+    if (uniqueCasesCount >= rule.minUniqueCases) {
       current = rule.level;
     }
   }
@@ -192,7 +194,7 @@ export function buildGamification(attempts: AttemptEntry[]): GamificationSnapsho
       : 0;
   const uniqueCaseIds = new Set(attempts.map((entry) => entry.caseId));
   const uniqueCases = uniqueCaseIds.size;
-  const level = getLevel(totalAttempts);
+  const level = getLevel(uniqueCases);
 
   const longestStreakDays = getLongestStreak(attempts);
   const streakDays = getCurrentStreak(attempts);
