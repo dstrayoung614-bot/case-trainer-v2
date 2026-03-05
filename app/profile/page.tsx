@@ -8,6 +8,7 @@ import { motion, type Variants } from 'framer-motion';
 import { useAuth } from '../lib/auth-context';
 import { loadAttempts, AttemptEntry } from '../lib/firestore-progress';
 import { buildGamification } from '../lib/gamification';
+import { cases } from '../lib/cases';
 
 // Recharts loaded only on client (no SSR)
 const RadarChart = dynamic(() => import('recharts').then(m => m.RadarChart), { ssr: false });
@@ -238,6 +239,7 @@ export default function ProfilePage() {
 
   const totalAttempts = attempts.length;
   const uniqueCases = new Set(attempts.map((e) => e.caseId)).size;
+  const totalCases = cases.length;
   const game = buildGamification(attempts);
   // avgScore из buildGamification — уже фильтрует попытки с нулевым баллом
   const avgScore = game.avgScore;
@@ -308,16 +310,16 @@ export default function ProfilePage() {
           {totalAttempts > 0 && (
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-500 font-medium">Готовность к интервью</span>
-                <span className={`font-bold ${avgScore >= 4 ? 'text-emerald-600' : avgScore >= 3 ? 'text-amber-600' : 'text-red-500'}`}>
-                  {Math.round((avgScore / 5) * 100)}%
+                <span className="text-gray-500 font-medium">Прогресс по кейсам</span>
+                <span className={`font-bold ${uniqueCases / totalCases >= 0.7 ? 'text-emerald-600' : uniqueCases / totalCases >= 0.4 ? 'text-amber-600' : 'text-indigo-500'}`}>
+                  {uniqueCases} / {totalCases} ({Math.round((uniqueCases / totalCases) * 100)}%)
                 </span>
               </div>
               <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                 <motion.div
-                  className={`h-full rounded-full ${avgScore >= 4 ? 'bg-emerald-500' : avgScore >= 3 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                  className={`h-full rounded-full ${uniqueCases / totalCases >= 0.7 ? 'bg-emerald-500' : uniqueCases / totalCases >= 0.4 ? 'bg-amber-500' : 'bg-indigo-400'}`}
                   initial={{ width: 0 }}
-                  animate={{ width: `${Math.round((avgScore / 5) * 100)}%` }}
+                  animate={{ width: `${Math.round((uniqueCases / totalCases) * 100)}%` }}
                   transition={{ duration: 0.8, ease: 'easeOut' as const, delay: 0.4 }}
                 />
               </div>
