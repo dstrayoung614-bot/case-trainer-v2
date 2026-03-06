@@ -108,7 +108,9 @@ ${scoresText}
   ]
 }
 
-weaknesses: 2-3 штуки. changes: 3-6 штук. coachingQuestions: ровно 3. keyLessons: ровно 3. В changes.original — цитируй точные слова студента.`;
+weaknesses: 2-3 штуки.
+changes: СТРОГО от 3 до 5 штук — только самые значимые улучшения, не больше. Если одна и та же цитата встречается несколько раз в ответе студента — делай ОДНО изменение, не несколько. Не дублируй одинаковые или похожие "БЫЛО"-фразы.
+coachingQuestions: ровно 3. keyLessons: ровно 3. В changes.original — цитируй точные слова студента.`;
 
     const completion = await client.chat.completions.create({
       model: process.env.OPENROUTER_MODEL ?? 'google/gemini-2.0-flash-001',
@@ -129,6 +131,19 @@ weaknesses: 2-3 штуки. changes: 3-6 штук. coachingQuestions: ровно
 
     if (!parsed.upgradedSolution || !parsed.changes) {
       throw new Error('Invalid AI response structure');
+    }
+
+    // Дедупликация: убираем изменения с одинаковым или почти одинаковым original
+    const seen = new Set<string>();
+    parsed.changes = parsed.changes.filter((c) => {
+      const key = c.original.trim().toLowerCase().slice(0, 60);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    // Жёсткий cap — не более 5 изменений
+    if (parsed.changes.length > 5) {
+      parsed.changes = parsed.changes.slice(0, 5);
     }
     if (!parsed.weaknesses || parsed.weaknesses.length === 0) {
       parsed.weaknesses = ['Не выявлено конкретных слабостей — проверьте ответ вручную'];
