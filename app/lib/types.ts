@@ -71,7 +71,11 @@ export type UpgradeChange = {
 
 export type UpgradeResponse = {
   upgradedSolution: string;
+  weaknesses: string[];
+  improvementExplanation: string;
   changes: UpgradeChange[];
+  coachingQuestions: string[];
+  nextIterationTask: string;
   keyLessons: string[];
   isMock?: boolean;
 };

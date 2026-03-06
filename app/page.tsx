@@ -1440,6 +1440,31 @@ function UpgradeScreen({
             <p className="text-sm text-gray-500 px-1">
               Каждая карточка — конкретное улучшение с объяснением, почему оно делает ответ сильнее.
             </p>
+
+            {/* Диагностика мышления */}
+            {(upgrade.weaknesses?.length || upgrade.improvementExplanation) && (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 space-y-3">
+                <h3 className="font-semibold text-amber-900 text-sm flex items-center gap-2">
+                  <span>🔎</span> Диагностика мышления
+                </h3>
+                {upgrade.weaknesses && upgrade.weaknesses.length > 0 && (
+                  <ul className="space-y-2">
+                    {upgrade.weaknesses.map((w, i) => (
+                      <li key={i} className="flex gap-2 text-sm text-amber-800">
+                        <span className="text-amber-500 flex-shrink-0 mt-0.5">▸</span>
+                        <span>{w}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {upgrade.improvementExplanation && (
+                  <p className="text-sm text-amber-700 border-t border-amber-200 pt-3 leading-relaxed">
+                    {upgrade.improvementExplanation}
+                  </p>
+                )}
+              </div>
+            )}
+
             {upgrade.changes.map((change, i) => (
               <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <div className="bg-gray-50 border-b border-gray-100 px-5 py-3 flex items-center gap-2">
@@ -1481,6 +1506,34 @@ function UpgradeScreen({
                 ))}
               </ol>
             </div>
+
+            {/* Coaching Questions */}
+            {upgrade.coachingQuestions && upgrade.coachingQuestions.length > 0 && (
+              <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-5 space-y-3">
+                <h3 className="font-semibold text-indigo-900 text-sm flex items-center gap-2">
+                  <span>💬</span> Вопросы для самопроверки
+                </h3>
+                <p className="text-xs text-indigo-600">Попробуй ответить на каждый вопрос вслух — это и есть тренировка мышления</p>
+                <ol className="space-y-2">
+                  {upgrade.coachingQuestions.map((q, i) => (
+                    <li key={i} className="flex gap-2 text-sm text-indigo-800">
+                      <span className="font-bold flex-shrink-0 text-indigo-400">{i + 1}.</span>
+                      <span>{q}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+
+            {/* Next Iteration Task */}
+            {upgrade.nextIterationTask && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 space-y-2">
+                <h3 className="font-semibold text-emerald-900 text-sm flex items-center gap-2">
+                  <span>🎯</span> Задание на следующую итерацию
+                </h3>
+                <p className="text-sm text-emerald-800 leading-relaxed">{upgrade.nextIterationTask}</p>
+              </div>
+            )}
           </div>
         )}
 
