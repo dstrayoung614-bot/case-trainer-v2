@@ -80,6 +80,20 @@ export async function POST(req: NextRequest) {
       throw new Error('Invalid AI response structure');
     }
 
+    // Гарантируем ровно 3 topFixes — AI иногда возвращает меньше
+    const TOPFIXES_FALLBACKS = [
+      'Добавьте явную приоритизацию: объясните, почему выбрали именно этот шаг первым',
+      'Назовите конкретные метрики для проверки ключевой гипотезы',
+      'Укажите хотя бы один компромисс или риск предложенного решения',
+    ];
+    while (parsed.topFixes.length < 3) {
+      const fallback = TOPFIXES_FALLBACKS[parsed.topFixes.length];
+      parsed.topFixes.push(fallback ?? 'Проработайте следующий слабый критерий из оценки выше');
+    }
+    if (parsed.topFixes.length > 3) {
+      parsed.topFixes = parsed.topFixes.slice(0, 3);
+    }
+
     // Гарантируем: каждый критерий с баллом ≤ 2 должен быть в issues.
     // Это защита от AI-лимита «не более 4 пунктов».
     const DIMENSION_FALLBACKS: Record<string, { label: string; whyItMatters: string }> = {
@@ -167,6 +181,7 @@ ${RUBRIC_DIMENSIONS}
 Укажи 2-3 реальные сильные стороны.
 Если ответ сильный — укажи 1-2 точки роста. Если слабый — укажи КАЖДЫЙ критерий с баллом 1-2, без ограничения по количеству.
 НЕ придумывай проблемы ради заполнения списка.
+topFixes — СТРОГО ровно 3 пункта, не больше и не меньше. Каждый — конкретное действие, привязанное к этому ответу.
 `;
 }
 
