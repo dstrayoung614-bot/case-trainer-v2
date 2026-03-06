@@ -1539,47 +1539,42 @@ function UpgradeScreen({
           </div>
         )}
 
-        {/* compare tab — full side-by-side */}
+        {/* compare tab — section-by-section */}
         {tab === 'compare' && (
-          <div className="space-y-3">
-            <p className="text-sm text-gray-500 px-1">Полное сравнение: ваш ответ слева, улучшенный справа.</p>
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              {/* sticky header */}
-              <div className="grid grid-cols-2 divide-x divide-gray-200 border-b border-gray-200 sticky top-0 bg-white z-10">
-                <div className="px-4 py-2.5 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-red-400 flex-shrink-0" />
-                  <span className="text-xs font-bold text-red-500 uppercase tracking-wide">Ваш ответ</span>
-                </div>
-                <div className="px-4 py-2.5 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
-                  <span className="text-xs font-bold text-emerald-600 uppercase tracking-wide">Улучшенный</span>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 divide-x divide-gray-100 min-w-0">
-                <div className="p-5 bg-red-50/40 min-w-0 overflow-hidden">
-                  <div className="break-words">
-                    <SimpleMarkdown text={originalSolution || 'Ответ не сохранён'} />
-                  </div>
-                </div>
-                <div className="p-5 bg-emerald-50/40 min-w-0 overflow-hidden">
-                  <SimpleMarkdown text={upgrade.upgradedSolution} />
-                </div>
-              </div>
-            </div>
-            {/* changes summary */}
-            <div className="space-y-2">
-              {upgrade.changes.map((change, i) => (
-                <div key={i} className="bg-white rounded-xl border border-gray-100 p-4 flex gap-3 items-start">
-                  <span className="w-5 h-5 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+          <div className="space-y-4">
+            <p className="text-sm text-gray-500 px-1">Каждый блок — один раздел ответа: ваша версия сверху, улучшенная снизу.</p>
+            {upgrade.changes.map((change, i) => (
+              <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                {/* section header */}
+                <div className="px-5 py-3 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
                     {i + 1}
                   </span>
-                  <div>
-                    <span className="text-xs font-semibold text-gray-700">{change.section}</span>
-                    <p className="text-xs text-gray-500 mt-0.5">{change.explanation}</p>
+                  <span className="text-sm font-semibold text-gray-800">{change.section}</span>
+                </div>
+                {/* before */}
+                <div className="px-5 pt-4 pb-2">
+                  <span className="text-xs font-bold text-red-500 uppercase tracking-wide">Ваш ответ</span>
+                  <div className="mt-2 bg-red-50 border border-red-100 rounded-xl p-3 text-sm text-gray-700 leading-relaxed">
+                    <SimpleMarkdown text={change.original} />
                   </div>
                 </div>
-              ))}
-            </div>
+                {/* after */}
+                <div className="px-5 pt-2 pb-4">
+                  <span className="text-xs font-bold text-emerald-600 uppercase tracking-wide">Улучшенный</span>
+                  <div className="mt-2 bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-sm text-gray-700 leading-relaxed">
+                    <SimpleMarkdown text={change.improved} />
+                  </div>
+                </div>
+                {/* explanation */}
+                <div className="px-5 pb-4">
+                  <div className="flex gap-2 bg-indigo-50 border border-indigo-100 rounded-lg p-3">
+                    <span className="text-indigo-400 flex-shrink-0 mt-0.5">💡</span>
+                    <p className="text-xs text-indigo-800">{change.explanation}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
