@@ -1440,7 +1440,7 @@ function UpgradeScreen({
         {tab === 'changes' && (
           <div className="space-y-4">
             <p className="text-sm text-gray-500 px-1">
-              Каждая карточка — конкретное улучшение с объяснением, почему оно делает ответ сильнее.
+              Каждая карточка — конкретное улучшение. Цитата из вашего ответа + как именно переписано. Полный переписанный текст — во вкладке «До/После».
             </p>
 
             {/* Диагностика мышления */}
@@ -1477,13 +1477,13 @@ function UpgradeScreen({
                 </div>
                 <div className="p-5 space-y-4">
                   <div className="space-y-1">
-                    <div className="text-xs font-semibold text-red-500 uppercase tracking-wide">Было</div>
-                    <div className="bg-red-50 border border-red-100 rounded-lg p-3 text-sm text-gray-700">
+                    <div className="text-xs font-semibold text-red-500 uppercase tracking-wide">Цитата из вашего ответа</div>
+                    <div className="bg-red-50 border border-red-100 rounded-lg p-3 text-sm text-gray-700 italic">
                       <SimpleMarkdown text={change.original} />
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <div className="text-xs font-semibold text-emerald-600 uppercase tracking-wide">Стало</div>
+                    <div className="text-xs font-semibold text-emerald-600 uppercase tracking-wide">Как улучшено</div>
                     <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 text-sm text-gray-700">
                       <SimpleMarkdown text={change.improved} />
                     </div>
