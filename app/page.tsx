@@ -161,13 +161,14 @@ function Stepper({ screen }: { screen: AppScreen }) {
   const current = STEP_FOR_SCREEN[screen];
   if (current < 0) return null;
   return (
-    <div className="flex items-center justify-center gap-0 max-w-sm mx-auto mb-6">
-      {STEPS.map((label, i) => {
-        const done = i < current;
-        const active = i === current;
-        return (
-          <div key={label} className="flex items-center">
-            <div className="flex flex-col items-center">
+    <div className="max-w-sm mx-auto mb-6">
+      {/* Ряд 1: кружки + линии — выровнены по центру кружка */}
+      <div className="flex items-center justify-center">
+        {STEPS.map((label, i) => {
+          const done = i < current;
+          const active = i === current;
+          return (
+            <div key={label} className="flex items-center">
               <div
                 className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
                   done
@@ -179,24 +180,27 @@ function Stepper({ screen }: { screen: AppScreen }) {
               >
                 {done ? '✓' : i + 1}
               </div>
-              <span
-                className={`text-[10px] mt-1 ${
-                  active ? 'text-indigo-700 font-semibold' : 'text-gray-400'
-                }`}
-              >
+              {i < STEPS.length - 1 && (
+                <div className={`w-10 h-0.5 mx-1 ${i < current ? 'bg-indigo-600' : 'bg-gray-200'}`} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {/* Ряд 2: подписи — точно под кружками */}
+      <div className="flex items-start justify-center mt-1">
+        {STEPS.map((label, i) => {
+          const active = i === current;
+          return (
+            <div key={label} className="flex items-center">
+              <span className={`text-[10px] w-7 text-center block ${active ? 'text-indigo-700 font-semibold' : 'text-gray-400'}`}>
                 {label}
               </span>
+              {i < STEPS.length - 1 && <div className="w-10 mx-1" />}
             </div>
-            {i < STEPS.length - 1 && (
-              <div
-                className={`w-10 h-0.5 mb-4 mx-1 ${
-                  i < current ? 'bg-indigo-600' : 'bg-gray-200'
-                }`}
-              />
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
