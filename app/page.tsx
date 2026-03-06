@@ -1891,7 +1891,7 @@ export default function Home() {
           caseDescription: activeCase.description,
           difficulty: activeCase.difficulty,
           skillFocus: activeCase.skillFocus,
-          solution: joinSolution(solution),
+          solution: joinSolutionFull(solution),
           selfReview,
           rubricVersion: 'v1',
         }),
