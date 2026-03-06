@@ -26,8 +26,8 @@ const RUBRIC_LABELS: Record<keyof RubricScores, string> = {
   diagnosis: 'Диагностика',
   metricsThinking: 'Метрики',
   prioritization: 'Приоритизация',
-  clarityStructure: 'Структура и ясность',
   tradeOffs: 'Компромиссы и риски',
+  clarityStructure: 'Структура и ясность',
 };
 
 const RUBRIC_DESCRIPTIONS: Record<keyof RubricScores, string> = {
@@ -321,11 +321,13 @@ function LandingScreen({
   onBrowse,
   progressStats,
   onResetProgress,
+  isLoggedIn,
 }: {
   onGuided: () => void;
   onBrowse: () => void;
   progressStats: { total: number; avgScore: number; uniqueCases: number } | null;
   onResetProgress: () => void;
+  isLoggedIn: boolean;
 }) {
   const [confirmReset, setConfirmReset] = useState(false);
   const fadeUp: Variants = {
@@ -403,7 +405,7 @@ function LandingScreen({
             onClick={onGuided}
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-xl transition-colors text-lg shadow-md"
           >
-            Попробовать бесплатно →
+            {isLoggedIn ? 'Продолжить подготовку →' : 'Попробовать бесплатно →'}
           </button>
           <button
             onClick={onBrowse}
@@ -411,7 +413,7 @@ function LandingScreen({
           >
             Выбрать кейс из каталога
           </button>
-          <p className="text-xs text-gray-400">Без карты · Без регистрации · 1 минута</p>
+          {!isLoggedIn && <p className="text-xs text-gray-400">Без карты · Без регистрации · 1 минута</p>}
         </motion.div>
 
         {progressStats && (
@@ -2103,7 +2105,7 @@ export default function Home() {
       )}
 
       {screen === 'landing' && (
-        <LandingScreen onGuided={startGuided} onBrowse={openBrowser} progressStats={progressStats} onResetProgress={resetProgress} />
+        <LandingScreen onGuided={startGuided} onBrowse={openBrowser} progressStats={progressStats} onResetProgress={resetProgress} isLoggedIn={!!user} />
       )}
       {screen === 'case-browser' && (
         <CaseBrowserScreen onSelect={selectFromBrowser} onBack={() => setScreen('landing')} />
