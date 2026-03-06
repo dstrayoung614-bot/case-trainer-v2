@@ -126,6 +126,24 @@ export async function POST(req: NextRequest) {
       parsed.issues = [...(parsed.issues ?? []), ...fallbackIssues];
     }
 
+    // Code-override: принудительно ставим 1 для секций, которые были пусты.
+    // Это защита от AI, который игнорирует маркер [не заполнено студентом].
+    const SECTION_TO_SCORE_KEY: Record<string, keyof typeof parsed.scores> = {
+      'формулировка проблемы': 'problemFraming',
+      'гипотезы':              'diagnosis',
+      'метрики':               'metricsThinking',
+      'действия':              'prioritization',
+      'риски':                 'tradeOffs',
+    };
+    const solutionLower = body.solution.toLowerCase();
+    for (const [sectionName, scoreKey] of Object.entries(SECTION_TO_SCORE_KEY)) {
+      // Ищем паттерн "## <section>\n[не заполнено студентом]"
+      const marker = `## ${sectionName}\n[не заполнено студентом]`;
+      if (solutionLower.includes(marker)) {
+        parsed.scores[scoreKey] = 1;
+      }
+    }
+
     return NextResponse.json(parsed, { status: 200 });
   } catch (err) {
     console.error('[analyze] error:', err);
@@ -182,6 +200,8 @@ ${RUBRIC_DIMENSIONS}
 Если ответ сильный — укажи 1-2 точки роста. Если слабый — укажи КАЖДЫЙ критерий с баллом 1-2, без ограничения по количеству.
 НЕ придумывай проблемы ради заполнения списка.
 topFixes — СТРОГО ровно 3 пункта, не больше и не меньше. Каждый — конкретное действие, привязанное к этому ответу.
+
+ВАЖНО: Если раздел ответа содержит текст "[не заполнено студентом]" — это означает, что студент не написал ничего в этом блоке. Оценка за соответствующий критерий ОБЯЗАТЕЛЬНО должна быть 1.
 `;
 }
 
