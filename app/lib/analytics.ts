@@ -1,3 +1,6 @@
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db, auth } from './firebase';
+
 export type EventName =
   | 'landing_viewed'
   | 'case_browser_opened'
@@ -37,18 +40,27 @@ export function track(
 
   if (typeof window === 'undefined') return;
 
+  // 1. localStorage (офлайн-буфер, как раньше)
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     const events: TrackEvent[] = raw ? JSON.parse(raw) : [];
     events.push(entry);
-    // keep last MAX_EVENTS to avoid unbounded growth
     if (events.length > MAX_EVENTS) events.splice(0, events.length - MAX_EVENTS);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
   } catch {
-    // silently fail — never block the user
+    // silently fail
   }
 
-  // also log to console during development
+  // 2. Firestore — коллекция `events` (fire-and-forget, никогда не блокирует)
+  if (db) {
+    const uid = auth?.currentUser?.uid ?? 'anonymous';
+    addDoc(collection(db, 'events'), {
+      ...entry,
+      uid,
+      ts: serverTimestamp(),
+    }).catch(() => {/* silently fail */});
+  }
+
   console.log('[CaseTrainer]', entry.event, meta ?? '');
 }
 
