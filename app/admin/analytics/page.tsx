@@ -78,7 +78,7 @@ export default function AnalyticsPage() {
   if (!data) return null;
 
   const { funnel, dau, topCases, summary } = data;
-  const funnelTop = funnel[0]?.count || 1;
+  const funnelTop = Math.max(...funnel.map((f) => f.count), 1);
   const dauMax = Math.max(...dau.map((d) => d.events), 1);
 
   return (
@@ -138,13 +138,17 @@ export default function AnalyticsPage() {
                   {/* Стрелка-разделитель с конверсией */}
                   {i > 0 && (
                     <div className="flex items-center gap-2 my-1">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                        convFromPrev != null && convFromPrev >= 70 ? 'bg-emerald-100 text-emerald-700' :
-                        convFromPrev != null && convFromPrev >= 40 ? 'bg-amber-100 text-amber-700' :
-                        'bg-red-100 text-red-600'
-                      }`}>
-                        ↓ {convFromPrev ?? 0}%
-                      </span>
+                      {convFromPrev != null ? (
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          convFromPrev >= 70 ? 'bg-emerald-100 text-emerald-700' :
+                          convFromPrev >= 40 ? 'bg-amber-100 text-amber-700' :
+                          'bg-red-100 text-red-600'
+                        }`}>
+                          ↓ {convFromPrev}%
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-300 px-2 py-0.5">↓</span>
+                      )}
                     </div>
                   )}
                   {/* Блок воронки */}
