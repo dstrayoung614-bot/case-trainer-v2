@@ -1841,8 +1841,11 @@ export default function Home() {
     }
   }, [user]);
 
-  // reload progress stats every time user lands on the home screen
+  // reload progress stats every time user lands on the home screen + трекаем визит
   useEffect(() => {
+    if (screen === 'landing') {
+      track('landing_viewed');
+    }
     if (screen === 'landing' && user) {
       loadAttempts(user.uid).then((entries) => {
         setProgressStats(calcStats(entries));
