@@ -2021,7 +2021,10 @@ export default function Home() {
 
   const nextCase = () => {
     track('next_case_clicked', { caseId: activeCase.id });
-    const next = getRandomCase(activeCase.id);
+    // Берём первый нерешённый кейс (не текущий), иначе случайный
+    const next =
+      cases.find((c) => c.id !== activeCase.id && !solvedCaseIds.has(c.id)) ??
+      getRandomCase(activeCase.id);
     resetForCase(next);
     setScreen('case');
   };
