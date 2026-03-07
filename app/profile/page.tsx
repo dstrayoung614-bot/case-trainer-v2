@@ -31,6 +31,15 @@ const fadeUp: Variants = {
   visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.08, duration: 0.35, ease: 'easeOut' as const } }),
 };
 
+function pluralRu(n: number, one: string, few: string, many: string): string {
+  const abs = Math.abs(n);
+  const mod10 = abs % 10;
+  const mod100 = abs % 100;
+  if (mod10 === 1 && mod100 !== 11) return one;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return few;
+  return many;
+}
+
 // Radar chart of average per-dimension scores
 function CompetencyRadar({ entries }: { entries: AttemptEntry[] }) {
   const withScores = entries.filter((e) => e.rubricScores);
@@ -330,7 +339,7 @@ export default function ProfilePage() {
         {/* stats cards */}
         <motion.div className="grid grid-cols-3 gap-3" initial="hidden" animate="visible" custom={3} variants={fadeUp}>
           {[
-            { value: totalAttempts, label: 'попыток' },
+            { value: totalAttempts, label: pluralRu(totalAttempts, 'попытка', 'попытки', 'попыток') },
             { value: uniqueCases, label: 'кейсов' },
             {
               value: totalAttempts ? avgScore.toFixed(1) : '—',
@@ -408,7 +417,7 @@ export default function ProfilePage() {
                 <div key={c.caseId} className="px-5 py-3.5 flex items-center gap-4">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800 truncate">{c.caseTitle}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{c.attempts} {c.attempts === 1 ? 'попытка' : c.attempts < 5 ? 'попытки' : 'попыток'}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{c.attempts} {pluralRu(c.attempts, 'попытка', 'попытки', 'попыток')}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="text-xs text-gray-400">лучший</span>
