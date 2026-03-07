@@ -326,12 +326,14 @@ function LandingScreen({
   progressStats,
   onResetProgress,
   isLoggedIn,
+  nextCaseTitle,
 }: {
   onGuided: () => void;
   onBrowse: () => void;
   progressStats: { total: number; avgScore: number; uniqueCases: number } | null;
   onResetProgress: () => void;
   isLoggedIn: boolean;
+  nextCaseTitle?: string;
 }) {
   const [confirmReset, setConfirmReset] = useState(false);
   const fadeUp: Variants = {
@@ -409,7 +411,11 @@ function LandingScreen({
             onClick={onGuided}
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-xl transition-colors text-lg shadow-md"
           >
-            {isLoggedIn ? 'Продолжить подготовку →' : 'Попробовать бесплатно →'}
+            {isLoggedIn && nextCaseTitle
+              ? `Следующий кейс: ${nextCaseTitle} →`
+              : isLoggedIn
+              ? 'Продолжить подготовку →'
+              : 'Попробовать бесплатно →'}
           </button>
           <button
             onClick={onBrowse}
@@ -1820,6 +1826,7 @@ export default function Home() {
   const [attemptNumber, setAttemptNumber] = useState(1);
   const [feedbackUseful, setFeedbackUseful] = useState<boolean | null>(null);
   const [progressStats, setProgressStats] = useState<{ total: number; avgScore: number; uniqueCases: number } | null>(null);
+  const [solvedCaseIds, setSolvedCaseIds] = useState<Set<number>>(new Set());
   const [newBadges, setNewBadges] = useState<BadgeMeta[]>([]);
   const [showOnboarding, setShowOnboarding] = useState(false);
   // гость может использовать апгрейд только один раз
@@ -1840,7 +1847,10 @@ export default function Home() {
   // reload progress stats every time user lands on the home screen
   useEffect(() => {
     if (screen === 'landing' && user) {
-      loadAttempts(user.uid).then((entries) => setProgressStats(calcStats(entries)));
+      loadAttempts(user.uid).then((entries) => {
+        setProgressStats(calcStats(entries));
+        setSolvedCaseIds(new Set(entries.map((e) => e.caseId)));
+      });
     }
   }, [screen, user]);
 
@@ -1858,8 +1868,12 @@ export default function Home() {
   };
 
   const startGuided = () => {
-    track('case_selected', { caseId: guidedStarterCase.id, caseTitle: guidedStarterCase.title });
-    resetForCase(guidedStarterCase);
+    // Если у пользователя есть решённые кейсы — открываем первый нерешённый
+    const nextCase = solvedCaseIds.size > 0
+      ? (cases.find((c) => !solvedCaseIds.has(c.id)) ?? guidedStarterCase)
+      : guidedStarterCase;
+    track('case_selected', { caseId: nextCase.id, caseTitle: nextCase.title });
+    resetForCase(nextCase);
     setScreen('case');
   };
 
@@ -2104,7 +2118,14 @@ export default function Home() {
       )}
 
       {screen === 'landing' && (
-        <LandingScreen onGuided={startGuided} onBrowse={openBrowser} progressStats={progressStats} onResetProgress={resetProgress} isLoggedIn={!!user} />
+        <LandingScreen
+          onGuided={startGuided}
+          onBrowse={openBrowser}
+          progressStats={progressStats}
+          onResetProgress={resetProgress}
+          isLoggedIn={!!user}
+          nextCaseTitle={solvedCaseIds.size > 0 ? (cases.find((c) => !solvedCaseIds.has(c.id))?.title) : undefined}
+        />
       )}
       {screen === 'case-browser' && (
         <CaseBrowserScreen onSelect={selectFromBrowser} onBack={() => setScreen('landing')} />
