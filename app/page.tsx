@@ -327,6 +327,7 @@ function LandingScreen({
   onResetProgress,
   isLoggedIn,
   nextCaseTitle,
+  allCasesSolved,
 }: {
   onGuided: () => void;
   onBrowse: () => void;
@@ -334,6 +335,7 @@ function LandingScreen({
   onResetProgress: () => void;
   isLoggedIn: boolean;
   nextCaseTitle?: string;
+  allCasesSolved?: boolean;
 }) {
   const [confirmReset, setConfirmReset] = useState(false);
   const fadeUp: Variants = {
@@ -407,16 +409,23 @@ function LandingScreen({
         </motion.div>
 
         <motion.div className="space-y-3" initial="hidden" animate="visible" custom={3} variants={fadeUp}>
-          <button
-            onClick={onGuided}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-xl transition-colors text-lg shadow-md"
-          >
-            {isLoggedIn && nextCaseTitle
-              ? `Следующий кейс: ${nextCaseTitle} →`
-              : isLoggedIn
-              ? 'Продолжить подготовку →'
-              : 'Попробовать бесплатно →'}
-          </button>
+          {allCasesSolved ? (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-center">
+              <p className="text-sm font-semibold text-emerald-700">🏆 Ты прошёл все кейсы!</p>
+              <p className="text-xs text-emerald-600 mt-0.5">Можно решать их повторно — результаты улучшатся</p>
+            </div>
+          ) : (
+            <button
+              onClick={onGuided}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-xl transition-colors text-lg shadow-md"
+            >
+              {isLoggedIn && nextCaseTitle
+                ? `Следующий кейс: ${nextCaseTitle} →`
+                : isLoggedIn
+                ? 'Продолжить подготовку →'
+                : 'Попробовать бесплатно →'}
+            </button>
+          )}
           <button
             onClick={onBrowse}
             className="w-full bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 rounded-xl transition-colors border border-gray-200 shadow-sm"
@@ -2125,6 +2134,7 @@ export default function Home() {
           onResetProgress={resetProgress}
           isLoggedIn={!!user}
           nextCaseTitle={solvedCaseIds.size > 0 ? (cases.find((c) => !solvedCaseIds.has(c.id))?.title) : undefined}
+          allCasesSolved={!!user && solvedCaseIds.size >= cases.length}
         />
       )}
       {screen === 'case-browser' && (
