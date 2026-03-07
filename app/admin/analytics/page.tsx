@@ -115,43 +115,62 @@ export default function AnalyticsPage() {
 
         {/* Funnel */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h2 className="font-semibold text-gray-800 mb-4">Воронка (уникальные пользователи)</h2>
-          <div className="space-y-2">
+          <h2 className="font-semibold text-gray-800 mb-1">Воронка конверсии</h2>
+          <p className="text-xs text-gray-400 mb-5">Уникальные пользователи на каждом шаге</p>
+          <div className="flex flex-col items-center gap-0">
             {funnel.map((step, i) => {
-              const pct = Math.round((step.count / funnelTop) * 100);
+              const pct = funnelTop > 0 ? (step.count / funnelTop) * 100 : 0;
+              // минимальная ширина 20%, максимальная 100%
+              const barPct = Math.max(pct, step.count > 0 ? 20 : 8);
               const convFromPrev = i > 0 && funnel[i - 1].count > 0
                 ? Math.round((step.count / funnel[i - 1].count) * 100)
                 : null;
+              const colors = [
+                'bg-indigo-600',
+                'bg-indigo-500',
+                'bg-violet-500',
+                'bg-violet-400',
+                'bg-purple-400',
+                'bg-purple-300',
+              ];
               return (
-                <div key={step.event}>
-                  <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="text-gray-700 font-medium">
-                      <span className="text-gray-400 mr-2">{i + 1}.</span>
+                <div key={step.event} className="w-full flex flex-col items-center">
+                  {/* Стрелка-разделитель с конверсией */}
+                  {i > 0 && (
+                    <div className="flex items-center gap-2 my-1">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        convFromPrev != null && convFromPrev >= 70 ? 'bg-emerald-100 text-emerald-700' :
+                        convFromPrev != null && convFromPrev >= 40 ? 'bg-amber-100 text-amber-700' :
+                        'bg-red-100 text-red-600'
+                      }`}>
+                        ↓ {convFromPrev ?? 0}%
+                      </span>
+                    </div>
+                  )}
+                  {/* Блок воронки */}
+                  <div
+                    className={`${colors[i] ?? 'bg-gray-300'} rounded-lg transition-all flex items-center justify-between px-4 py-2.5`}
+                    style={{ width: `${barPct}%`, minWidth: '160px' }}
+                  >
+                    <span className="text-white text-xs font-medium truncate mr-2">
+                      <span className="opacity-60 mr-1">{i + 1}.</span>
                       {FUNNEL_LABELS[step.event] ?? step.event}
                     </span>
-                    <div className="flex items-center gap-3">
-                      {convFromPrev != null && (
-                        <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-                          convFromPrev >= 70 ? 'bg-emerald-100 text-emerald-700' :
-                          convFromPrev >= 40 ? 'bg-amber-100 text-amber-700' :
-                          'bg-red-100 text-red-700'
-                        }`}>
-                          ↓ {convFromPrev}%
-                        </span>
-                      )}
-                      <span className="text-gray-900 font-bold w-8 text-right">{step.count}</span>
-                    </div>
-                  </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-indigo-500 rounded-full transition-all"
-                      style={{ width: `${pct}%` }}
-                    />
+                    <span className="text-white font-bold text-sm flex-shrink-0">{step.count}</span>
                   </div>
                 </div>
               );
             })}
           </div>
+          {/* Итоговая конверсия */}
+          {funnel[0]?.count > 0 && funnel[funnel.length - 1]?.count >= 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between text-sm">
+              <span className="text-gray-500">Сквозная конверсия (сайт → апгрейд)</span>
+              <span className="font-bold text-indigo-600">
+                {Math.round((funnel[funnel.length - 1].count / funnel[0].count) * 100)}%
+              </span>
+            </div>
+          )}
         </div>
 
         {/* DAU chart */}
