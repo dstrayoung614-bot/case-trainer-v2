@@ -1558,42 +1558,30 @@ function UpgradeScreen({
           </div>
         )}
 
-        {/* compare tab — section-by-section */}
+        {/* compare tab — full before / after */}
         {tab === 'compare' && (
           <div className="space-y-4">
-            <p className="text-sm text-gray-500 px-1">Каждый блок — один раздел ответа: ваша версия сверху, улучшенная снизу.</p>
-            {upgrade.changes.map((change, i) => (
-              <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                {/* section header */}
-                <div className="px-5 py-3 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                    {i + 1}
-                  </span>
-                  <span className="text-sm font-semibold text-gray-800">{change.section}</span>
-                </div>
-                {/* before */}
-                <div className="px-5 pt-4 pb-2">
-                  <span className="text-xs font-bold text-red-500 uppercase tracking-wide">Ваш ответ</span>
-                  <div className="mt-2 bg-red-50 border border-red-100 rounded-xl p-3 text-sm text-gray-700 leading-relaxed">
-                    <SimpleMarkdown text={change.original} />
-                  </div>
-                </div>
-                {/* after */}
-                <div className="px-5 pt-2 pb-4">
-                  <span className="text-xs font-bold text-emerald-600 uppercase tracking-wide">Улучшенный</span>
-                  <div className="mt-2 bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-sm text-gray-700 leading-relaxed">
-                    <SimpleMarkdown text={change.improved} />
-                  </div>
-                </div>
-                {/* explanation */}
-                <div className="px-5 pb-4">
-                  <div className="flex gap-2 bg-indigo-50 border border-indigo-100 rounded-lg p-3">
-                    <span className="text-indigo-400 flex-shrink-0 mt-0.5">💡</span>
-                    <p className="text-xs text-indigo-800">{change.explanation}</p>
-                  </div>
-                </div>
+            <p className="text-sm text-gray-500 px-1">Ваш полный ответ сверху — улучшенная версия снизу с учётом всех комментариев ИИ.</p>
+
+            {/* before — full original */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-5 py-3 bg-red-50 border-b border-red-100 flex items-center gap-2">
+                <span className="text-xs font-bold text-red-500 uppercase tracking-wide">Ваш ответ</span>
               </div>
-            ))}
+              <div className="px-5 py-4 text-sm text-gray-700 leading-relaxed">
+                <SimpleMarkdown text={originalSolution} />
+              </div>
+            </div>
+
+            {/* after — full upgraded */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-5 py-3 bg-emerald-50 border-b border-emerald-100 flex items-center gap-2">
+                <span className="text-xs font-bold text-emerald-600 uppercase tracking-wide">Улучшенный ответ</span>
+              </div>
+              <div className="px-5 py-4 text-sm text-gray-700 leading-relaxed">
+                <SimpleMarkdown text={upgrade.upgradedSolution} />
+              </div>
+            </div>
           </div>
         )}
 
