@@ -125,7 +125,12 @@ export default function AdminPage() {
             ADMIN
           </span>
         </div>
-        <div className="text-sm text-gray-500">{profile?.email}</div>
+        <div className="text-sm text-gray-500 flex items-center gap-4">
+          <Link href="/admin/analytics" className="text-indigo-600 hover:text-indigo-800 font-medium">
+            📊 Аналитика
+          </Link>
+          {profile?.email}
+        </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
