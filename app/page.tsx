@@ -1182,7 +1182,12 @@ function FeedbackScreen({
               </div>
             ))}
           </div>
-          {!feedback.isMock && <p className="text-xs text-gray-400 border-t pt-3">{feedback.disclaimer}</p>}
+          {!feedback.isMock && (
+            <div className="border-t pt-3 space-y-1.5">
+              <p className="text-xs text-gray-400">{feedback.disclaimer}</p>
+              <p className="text-xs text-gray-400">💡 <span className="font-medium text-gray-500">4/5 — сильный ответ. 5/5 — эталонный.</span> Не стремись к пятёркам везде — стремись к конкретике и логике.</p>
+            </div>
+          )}
         </div>
 
         {/* strengths */}
