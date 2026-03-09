@@ -1949,11 +1949,14 @@ export default function Home() {
       setScreen('feedback');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Неизвестная ошибка';
-      setError(
-        msg.includes('timeout') || msg.includes('AbortError')
-          ? 'Анализ занял слишком долго. Попробуйте снова.'
-          : `Ошибка: ${msg}. Попробуйте снова.`
-      );
+      if (msg.startsWith('rate_limit:')) {
+        const mins = msg.split(':')[1];
+        setError(`Вы отправили слишком много запросов. Лимит обновится через ${mins} мин. Это сделано для защиты сервиса.`);
+      } else if (msg.includes('timeout') || msg.includes('AbortError')) {
+        setError('Анализ занял слишком долго. Попробуйте снова.');
+      } else {
+        setError(`Ошибка: ${msg}. Попробуйте снова.`);
+      }
     } finally {
       setLoading(false);
     }
@@ -1997,7 +2000,12 @@ export default function Home() {
       setScreen('upgrade');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Неизвестная ошибка';
-      setError(`Ошибка улучшения: ${msg}. Попробуйте снова.`);
+      if (msg.startsWith('rate_limit:')) {
+        const mins = msg.split(':')[1];
+        setError(`Вы отправили слишком много запросов. Лимит обновится через ${mins} мин. Это сделано для защиты сервиса.`);
+      } else {
+        setError(`Ошибка улучшения: ${msg}. Попробуйте снова.`);
+      }
     } finally {
       setUpgradeLoading(false);
     }

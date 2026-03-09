@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { AnalyzeRequest, FeedbackResponse } from '@/app/lib/types';
+import { checkRateLimit } from '@/app/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +24,15 @@ const RUBRIC_DIMENSIONS = `
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? req.headers.get('x-real-ip') ?? 'unknown';
+    const rl = checkRateLimit(ip);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: `rate_limit:${rl.resetInMinutes}` },
+        { status: 429 }
+      );
+    }
+
     const body: AnalyzeRequest = await req.json();
 
     if (!body.solution || body.solution.trim().length < 50) {
