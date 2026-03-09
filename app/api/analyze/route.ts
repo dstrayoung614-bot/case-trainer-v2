@@ -73,8 +73,22 @@ export async function POST(req: NextRequest) {
       ],
     });
 
-    const raw = completion.choices[0].message.content ?? '{}';
-    const parsed = JSON.parse(raw) as FeedbackResponse;
+    const rawContent = completion.choices[0].message.content ?? '{}';
+    const jsonMatch = rawContent.match(/```(?:json)?\s*([\s\S]*?)```/);
+    const rawJson = jsonMatch ? jsonMatch[1] : rawContent;
+    const sanitized = rawJson
+      .replace(/\\(?!["\\/bfnrtu])/g, '\\\\')
+      .replace(/[\u0000-\u001F\u007F]/g, (c) => {
+        const safe: Record<string, string> = { '\n': '\\n', '\r': '\\r', '\t': '\\t' };
+        return safe[c] ?? '';
+      });
+    let parsed: FeedbackResponse;
+    try {
+      parsed = JSON.parse(sanitized) as FeedbackResponse;
+    } catch {
+      const aggressive = rawJson.replace(/[\u0000-\u001F\u007F]/g, ' ').replace(/\\(?!["\\/bfnrtu])/g, '/');
+      parsed = JSON.parse(aggressive) as FeedbackResponse;
+    }
 
     if (!parsed.scores || !parsed.topFixes) {
       throw new Error('Invalid AI response structure');

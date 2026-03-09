@@ -126,8 +126,25 @@ coachingQuestions: ровно 3. keyLessons: ровно 3. В changes.original �
       ],
     });
 
-    const raw = completion.choices[0].message.content ?? '{}';
-    const parsed = JSON.parse(raw) as UpgradeResponse;
+    const rawContent = completion.choices[0].message.content ?? '{}';
+    // Извлекаем JSON из markdown-блока если AI обернул его в ```json ... ```
+    const jsonMatch = rawContent.match(/```(?:json)?\s*([\s\S]*?)```/);
+    const rawJson = jsonMatch ? jsonMatch[1] : rawContent;
+    // Санитизация: убираем невалидные escape-последовательности
+    const sanitized = rawJson
+      .replace(/\\(?!["\\/bfnrtu])/g, '\\\\') // экранируем одиночные обратные слэши
+      .replace(/[\u0000-\u001F\u007F]/g, (c) => {  // удаляем управляющие символы
+        const safe: Record<string, string> = { '\n': '\\n', '\r': '\\r', '\t': '\\t' };
+        return safe[c] ?? '';
+      });
+    let parsed: UpgradeResponse;
+    try {
+      parsed = JSON.parse(sanitized) as UpgradeResponse;
+    } catch {
+      // Последняя попытка: более агрессивная замена всех проблемных символов
+      const aggressive = rawJson.replace(/[\u0000-\u001F\u007F]/g, ' ').replace(/\\(?!["\\/bfnrtu])/g, '/');
+      parsed = JSON.parse(aggressive) as UpgradeResponse;
+    }
 
     if (!parsed.upgradedSolution || !parsed.changes) {
       throw new Error('Invalid AI response structure');
