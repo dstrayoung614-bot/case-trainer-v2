@@ -37,11 +37,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  async function createSession(user: User) {
+    try {
+      const idToken = await user.getIdToken();
+      await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      });
+    } catch {
+      // session cookie — best effort, не блокируем UI
+    }
+  }
+
   useEffect(() => {
     if (!auth) { setLoading(false); return; }
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser && db) {
+        // Восстанавливаем session cookie при каждой загрузке страницы
+        // чтобы /api/admin/users и другие серверные роуты работали
+        createSession(firebaseUser);
         const snap = await getDoc(doc(db, 'users', firebaseUser.uid));
         setProfile(snap.exists() ? (snap.data() as UserProfile) : null);
       } else {
@@ -50,16 +66,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
     return unsubscribe;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  async function createSession(user: User) {
-    const idToken = await user.getIdToken();
-    await fetch('/api/auth/session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idToken }),
-    });
-  }
 
   async function signUp(email: string, password: string, displayName: string) {
     if (!auth || !db) throw new Error('Firebase не инициализирован');
