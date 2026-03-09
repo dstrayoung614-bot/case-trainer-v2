@@ -763,6 +763,7 @@ function SelfReviewScreen({
   setSelfReview,
   onAnalyze,
   loading,
+  retryInfo,
   onBack,
   screen,
   isGuest,
@@ -771,6 +772,7 @@ function SelfReviewScreen({
   setSelfReview: (sr: SelfReview) => void;
   onAnalyze: () => void;
   loading: boolean;
+  retryInfo?: string | null;
   onBack: () => void;
   screen: AppScreen;
   isGuest?: boolean;
@@ -839,7 +841,7 @@ function SelfReviewScreen({
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                 </svg>
-                Анализирую ваш ответ...
+                {retryInfo ?? 'Анализирую ваш ответ...'}
               </>
             ) : (
               'Анализировать →'
@@ -858,7 +860,7 @@ function SkeletonBlock({ className = '' }: { className?: string }) {
   return <div className={`bg-gray-200 rounded-xl animate-pulse ${className}`} />;
 }
 
-function UpgradeLoadingScreen({ activeCase, screen }: { activeCase: Case; screen: AppScreen }) {
+function UpgradeLoadingScreen({ activeCase, screen, retryInfo }: { activeCase: Case; screen: AppScreen; retryInfo?: string | null }) {
   return (
     <div className="min-h-screen bg-gray-50 px-4 py-10">
       <div className="max-w-2xl mx-auto space-y-5">
@@ -867,7 +869,7 @@ function UpgradeLoadingScreen({ activeCase, screen }: { activeCase: Case; screen
           <div className="flex items-center gap-3">
             <span className="text-3xl">🤖</span>
             <div>
-              <h2 className="text-xl font-bold">AI дорабатывает ваш ответ…</h2>
+              <h2 className="text-xl font-bold">{retryInfo ?? 'AI дорабатывает ваш ответ…'}</h2>
               <p className="text-violet-200 text-sm mt-0.5">{activeCase.title}</p>
             </div>
           </div>
@@ -1827,6 +1829,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryInfo, setRetryInfo] = useState<string | null>(null);
   const [attemptNumber, setAttemptNumber] = useState(1);
   const [feedbackUseful, setFeedbackUseful] = useState<boolean | null>(null);
   const [progressStats, setProgressStats] = useState<{ total: number; avgScore: number; uniqueCases: number } | null>(null);
@@ -1900,13 +1903,50 @@ export default function Home() {
     setScreen('self-review');
   };
 
+  // Retry helper: повторяет запрос до maxRetries раз при сетевых/5xx ошибках.
+  // НЕ повторяет при 400, 429 (клиентские ошибки).
+  const fetchWithRetry = async (
+    url: string,
+    options: RequestInit,
+    onRetry: (attempt: number, max: number) => void,
+    maxRetries = 2,
+    delayMs = 2500,
+  ): Promise<Response> => {
+    let lastErr: unknown;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const res = await fetch(url, options);
+        // не ретраить клиентские ошибки
+        if (res.status === 400 || res.status === 429) return res;
+        if (res.ok) return res;
+        // 5xx — ретраить
+        if (attempt < maxRetries) {
+          onRetry(attempt + 1, maxRetries);
+          await new Promise((r) => setTimeout(r, delayMs));
+          continue;
+        }
+        return res;
+      } catch (err) {
+        lastErr = err;
+        if (attempt < maxRetries) {
+          onRetry(attempt + 1, maxRetries);
+          await new Promise((r) => setTimeout(r, delayMs));
+        }
+      }
+    }
+    throw lastErr;
+  };
+
   const analyze = useCallback(async () => {
     track('analyze_clicked', { caseId: activeCase.id, attemptNumber });
     setLoading(true);
     setError(null);
+    setRetryInfo(null);
 
     try {
-      const res = await fetch('/api/analyze', {
+      const res = await fetchWithRetry(
+        '/api/analyze',
+        {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: AbortSignal.timeout(60_000),
@@ -1920,7 +1960,10 @@ export default function Home() {
           selfReview,
           rubricVersion: 'v1',
         }),
-      });
+        },
+        (attempt, max) => setRetryInfo(`Повторная попытка ${attempt}/${max}...`),
+      );
+      setRetryInfo(null);
       if (!res.ok) {
         const e = await res.json();
         throw new Error(e.error || `HTTP ${res.status}`);
@@ -1966,6 +2009,7 @@ export default function Home() {
       }
     } finally {
       setLoading(false);
+      setRetryInfo(null);
     }
   }, [activeCase, solution, selfReview, attemptNumber, user]);
 
@@ -1976,9 +2020,12 @@ export default function Home() {
     setUpgradeLoading(true);
     setScreen('upgrade');    // сразу переходим на экран апгрейда — скелетон виден
     setError(null);
+    setRetryInfo(null);
 
     try {
-      const res = await fetch('/api/upgrade', {
+      const res = await fetchWithRetry(
+        '/api/upgrade',
+        {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: AbortSignal.timeout(90_000),
@@ -1991,7 +2038,10 @@ export default function Home() {
           originalSolution: joinSolutionFull(solution),
           feedback,
         }),
-      });
+        },
+        (attempt, max) => setRetryInfo(`Повторная попытка ${attempt}/${max}...`),
+      );
+      setRetryInfo(null);
       if (!res.ok) {
         const e = await res.json();
         throw new Error(e.error || `HTTP ${res.status}`);
@@ -2015,6 +2065,7 @@ export default function Home() {
       }
     } finally {
       setUpgradeLoading(false);
+      setRetryInfo(null);
     }
   }, [activeCase, solution, feedback, attemptNumber]);
 
@@ -2169,13 +2220,14 @@ export default function Home() {
           setSelfReview={setSelfReview}
           onAnalyze={analyze}
           loading={loading}
+          retryInfo={retryInfo}
           onBack={() => setScreen('case')}
           screen={screen}
           isGuest={!user}
         />
       )}
       {screen === 'upgrade' && upgradeLoading && (
-        <UpgradeLoadingScreen activeCase={activeCase} screen='upgrade' />
+        <UpgradeLoadingScreen activeCase={activeCase} screen='upgrade' retryInfo={retryInfo} />
       )}
       {screen === 'feedback' && feedback && !upgradeLoading && (
         <FeedbackScreen
