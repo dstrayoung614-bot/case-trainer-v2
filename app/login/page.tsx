@@ -20,7 +20,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await signIn(email, password);
-      router.push('/');
+      router.replace('/');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Ошибка входа';
       if (msg.includes('invalid-credential') || msg.includes('wrong-password')) {

@@ -32,7 +32,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await signUp(email, password, displayName);
-      router.push('/');
+      router.replace('/');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Ошибка регистрации';
       if (msg.includes('email-already-in-use')) {
