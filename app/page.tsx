@@ -648,7 +648,7 @@ function CaseScreen({
   screen: AppScreen;
 }) {
   const totalLength = Object.values(solution).join('').trim().length;
-  const tooShort = totalLength < 50;
+  const tooShort = totalLength < 20;
 
   return (
     <div className="min-h-screen bg-gray-50 px-4 py-10">
@@ -715,8 +715,8 @@ function CaseScreen({
           <div className="space-y-3">
             <div className="flex items-center justify-between px-1 mb-1">
               <h3 className="font-semibold text-gray-800">Ваш ответ</h3>
-              <span className={`text-xs ${tooShort && totalLength > 0 ? 'text-red-400' : 'text-gray-400'}`}>
-                {totalLength === 0 ? 'Заполните хотя бы один раздел' : `${totalLength} симв.${tooShort ? ' (нужно минимум 50)' : ''}`}
+              <span className={`text-xs ${tooShort && totalLength > 0 ? 'text-orange-400' : 'text-gray-400'}`}>
+                {totalLength === 0 ? 'Заполните хотя бы один раздел' : `${totalLength} симв. суммарно${tooShort ? ' — напишите немного больше' : ''}`}
               </span>
             </div>
 
@@ -742,7 +742,7 @@ function CaseScreen({
 
             <button
               onClick={onAnalyze}
-              disabled={tooShort}
+              disabled={totalLength === 0}
               className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-colors"
             >
               Далее: самооценка →
