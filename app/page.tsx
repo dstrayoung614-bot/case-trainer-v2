@@ -193,9 +193,11 @@ function Stepper({ screen }: { screen: AppScreen }) {
           const active = i === current;
           return (
             <div key={label} className="flex items-center">
-              <span className={`text-[10px] w-7 text-center block ${active ? 'text-indigo-700 font-semibold' : 'text-gray-400'}`}>
-                {label}
-              </span>
+              <div className="relative w-7 h-4">
+                <span className={`absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] text-center leading-tight ${active ? 'text-indigo-700 font-semibold' : 'text-gray-400'}`}>
+                  {label}
+                </span>
+              </div>
               {i < STEPS.length - 1 && <div className="w-10 mx-1" />}
             </div>
           );
