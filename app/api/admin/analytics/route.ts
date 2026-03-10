@@ -107,7 +107,9 @@ export async function GET(req: NextRequest) {
         uniqueActiveUids,
         avgScoreAll,
         totalFeedbacks: feedbackEvents.length,
+        uniqueFeedbackUids: new Set(feedbackEvents.map((e) => e.uid)).size,
         totalUpgrades: events.filter((e) => e.event === 'upgrade_received').length,
+        uniqueUpgradeUids: new Set(events.filter((e) => e.event === 'upgrade_received').map((e) => e.uid)).size,
       },
     });
   } catch (err) {

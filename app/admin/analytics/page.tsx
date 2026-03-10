@@ -14,7 +14,9 @@ type Summary = {
   uniqueActiveUids: number;
   avgScoreAll: number | null;
   totalFeedbacks: number;
+  uniqueFeedbackUids: number;
   totalUpgrades: number;
+  uniqueUpgradeUids: number;
 };
 
 type AnalyticsData = {
@@ -99,16 +101,17 @@ export default function AnalyticsPage() {
         {/* Summary cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {[
-            { label: 'Зарегистрированных', value: summary.totalUsers, color: 'text-indigo-600' },
-            { label: 'Активных (с событиями)', value: summary.uniqueActiveUids, color: 'text-violet-600' },
-            { label: 'Фидбеков получено', value: summary.totalFeedbacks, color: 'text-blue-600' },
-            { label: 'Апгрейдов получено', value: summary.totalUpgrades, color: 'text-emerald-600' },
-            { label: 'Средний балл', value: summary.avgScoreAll != null ? `${summary.avgScoreAll}/5` : '—', color: 'text-amber-600' },
-            { label: 'Всего событий', value: summary.totalEvents, color: 'text-gray-600' },
+            { label: 'Зарегистрированных', value: summary.totalUsers, sub: undefined, color: 'text-indigo-600' },
+            { label: 'Активных (с событиями)', value: summary.uniqueActiveUids, sub: undefined, color: 'text-violet-600' },
+            { label: 'Фидбеков получено', value: summary.totalFeedbacks, sub: `${summary.uniqueFeedbackUids} уникальных`, color: 'text-blue-600' },
+            { label: 'Апгрейдов получено', value: summary.totalUpgrades, sub: `${summary.uniqueUpgradeUids} уникальных`, color: 'text-emerald-600' },
+            { label: 'Средний балл', value: summary.avgScoreAll != null ? `${summary.avgScoreAll}/5` : '—', sub: undefined, color: 'text-amber-600' },
+            { label: 'Всего событий', value: summary.totalEvents, sub: undefined, color: 'text-gray-600' },
           ].map((card) => (
             <div key={card.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
               <p className="text-xs text-gray-500">{card.label}</p>
               <p className={`text-2xl font-bold mt-1 ${card.color}`}>{card.value}</p>
+              {card.sub && <p className="text-xs text-gray-400 mt-0.5">{card.sub}</p>}
             </div>
           ))}
         </div>
