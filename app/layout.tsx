@@ -39,7 +39,9 @@ export default function RootLayout({
         <AuthProvider>
           {children}
           <a
-            href="mailto:distrayoung@yandex.ru?subject=Фидбек CaseTrainer"
+            href="https://docs.google.com/forms/d/1Kno57t-hIHH7guvq-OK0Sa5o4HRRY5fdlRaF11hoqSg/viewform"
+            target="_blank"
+            rel="noopener noreferrer"
             title="Написать фидбек"
             className="fixed bottom-4 left-4 z-50 flex items-center gap-2 bg-white border border-gray-200 shadow-md hover:shadow-lg text-gray-600 hover:text-indigo-600 text-xs font-medium px-3 py-2 rounded-full transition-all"
           >
