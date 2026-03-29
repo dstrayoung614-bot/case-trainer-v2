@@ -157,7 +157,12 @@ export async function POST(req: NextRequest) {
     });
 
     const raw = completion.choices[0]?.message?.content ?? '{}';
-    const parsed: SatResponse = JSON.parse(raw);
+    let parsed: SatResponse;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return NextResponse.json(getMockSatResponse(), { status: 200 });
+    }
 
     // Validate shape
     if (!parsed.overallScores || !parsed.caseScores) {
