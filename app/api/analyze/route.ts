@@ -29,7 +29,8 @@ const RUBRIC_DIMENSIONS = `
 export async function POST(req: NextRequest) {
   try {
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? req.headers.get('x-real-ip') ?? 'unknown';
-    const rl = checkRateLimit(ip);
+    // namespace 'analyze' — счётчик независим от upgrade и sat
+    const rl = checkRateLimit(ip, { namespace: 'analyze', maxRequests: 10 });
     if (!rl.allowed) {
       return NextResponse.json(
         { error: `rate_limit:${rl.resetInMinutes}` },

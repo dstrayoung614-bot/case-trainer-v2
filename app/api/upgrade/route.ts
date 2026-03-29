@@ -8,7 +8,8 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
   try {
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? req.headers.get('x-real-ip') ?? 'unknown';
-    const rl = checkRateLimit(ip);
+    // namespace 'upgrade' — счётчик независим от analyze; лимит 5/час (дороже)
+    const rl = checkRateLimit(ip, { namespace: 'upgrade', maxRequests: 5 });
     if (!rl.allowed) {
       return NextResponse.json(
         { error: `rate_limit:${rl.resetInMinutes}` },
