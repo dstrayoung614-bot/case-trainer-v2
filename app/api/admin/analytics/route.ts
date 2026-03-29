@@ -97,6 +97,13 @@ export async function GET(req: NextRequest) {
       ? parseFloat((feedbackEvents.reduce((a, b) => a + (b.avgScore ?? 0), 0) / feedbackEvents.length).toFixed(2))
       : null;
 
+    // 6. Лендинг и анонимная воронка
+    const totalLandingViews = events.filter((e) => e.event === 'landing_viewed').length;
+    const anonFeedbacks = feedbackEvents.filter((e) => e.uid === 'anonymous').length;
+    const registeredFeedbackUids = new Set(
+      feedbackEvents.filter((e) => e.uid !== 'anonymous').map((e) => e.uid)
+    );
+
     return NextResponse.json({
       funnel,
       dau,
@@ -110,6 +117,9 @@ export async function GET(req: NextRequest) {
         uniqueFeedbackUids: new Set(feedbackEvents.map((e) => e.uid)).size,
         totalUpgrades: events.filter((e) => e.event === 'upgrade_received').length,
         uniqueUpgradeUids: new Set(events.filter((e) => e.event === 'upgrade_received').map((e) => e.uid)).size,
+        totalLandingViews,
+        anonFeedbacks,
+        registeredFeedbacks: registeredFeedbackUids.size,
       },
     });
   } catch (err) {

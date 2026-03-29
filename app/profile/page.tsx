@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, type Variants } from 'framer-motion';
@@ -9,22 +8,7 @@ import { useAuth } from '../lib/auth-context';
 import { loadAttempts, AttemptEntry } from '../lib/firestore-progress';
 import { buildGamification } from '../lib/gamification';
 import { cases } from '../lib/cases';
-
-// Recharts loaded only on client (no SSR)
-const RadarChart = dynamic(() => import('recharts').then(m => m.RadarChart), { ssr: false });
-const Radar = dynamic(() => import('recharts').then(m => m.Radar), { ssr: false });
-const PolarGrid = dynamic(() => import('recharts').then(m => m.PolarGrid), { ssr: false });
-const PolarAngleAxis = dynamic(() => import('recharts').then(m => m.PolarAngleAxis), { ssr: false });
-const ResponsiveContainer = dynamic(() => import('recharts').then(m => m.ResponsiveContainer), { ssr: false });
-
-const RUBRIC_LABELS: Record<string, string> = {
-  problemFraming: 'Постановка',
-  diagnosis: 'Диагностика',
-  metricsThinking: 'Метрики',
-  prioritization: 'Приоритизация',
-  clarityStructure: 'Структура',
-  tradeOffs: 'Риски',
-};
+import { CompetencyRadar, RUBRIC_LABELS } from '../components/radar-chart';
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 16 },
@@ -40,8 +24,8 @@ function pluralRu(n: number, one: string, few: string, many: string): string {
   return many;
 }
 
-// Radar chart of average per-dimension scores
-function CompetencyRadar({ entries }: { entries: AttemptEntry[] }) {
+// Compute average scores from attempt entries
+function ProfileRadar({ entries }: { entries: AttemptEntry[] }) {
   const withScores = entries.filter((e) => e.rubricScores);
   if (withScores.length === 0) return null;
 
@@ -51,21 +35,10 @@ function CompetencyRadar({ entries }: { entries: AttemptEntry[] }) {
   for (const e of withScores) {
     for (const k of keys) sums[k] += (e.rubricScores![k] ?? 0);
   }
-  const data = keys.map((k) => ({
-    subject: RUBRIC_LABELS[k],
-    value: parseFloat((sums[k] / withScores.length).toFixed(2)),
-    fullMark: 5,
-  }));
+  const avg: Record<string, number> = {};
+  keys.forEach((k) => (avg[k] = parseFloat((sums[k] / withScores.length).toFixed(2))));
 
-  return (
-    <ResponsiveContainer width="100%" height={220}>
-      <RadarChart data={data} margin={{ top: 10, right: 20, bottom: 10, left: 20 }}>
-        <PolarGrid stroke="#e5e7eb" />
-        <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: '#6b7280', fontFamily: 'var(--font-inter, sans-serif)' }} />
-        <Radar name="avg" dataKey="value" stroke="#6366f1" fill="#6366f1" fillOpacity={0.25} strokeWidth={2} dot={{ r: 3, fill: '#6366f1' }} />
-      </RadarChart>
-    </ResponsiveContainer>
-  );
+  return <CompetencyRadar scores={avg} />;
 }
 
 // Badge grid — unlocked = full color, locked = grayscale+dim
@@ -221,10 +194,17 @@ function formatDate(ts: number) {
 }
 
 export default function ProfilePage() {
-  const { user, profile, loading, logOut } = useAuth();
+  const { user, profile, loading, logOut, updateProfile } = useAuth();
   const router = useRouter();
   const [attempts, setAttempts] = useState<AttemptEntry[]>([]);
   const [fetching, setFetching] = useState(true);
+
+  // Settings state
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const [nameSaving, setNameSaving] = useState(false);
+  const [nameError, setNameError] = useState('');
+  const [hideSaving, setHideSaving] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.push('/login');
@@ -280,6 +260,37 @@ export default function ProfilePage() {
   const handleLogOut = async () => {
     await logOut();
     router.push('/login');
+  };
+
+  const handleStartEditName = () => {
+    setNameInput(profile?.displayName ?? '');
+    setNameError('');
+    setEditingName(true);
+  };
+
+  const handleSaveName = async () => {
+    const trimmed = nameInput.trim();
+    if (!trimmed) { setNameError('Ник не может быть пустым'); return; }
+    if (trimmed.length > 30) { setNameError('Максимум 30 символов'); return; }
+    setNameSaving(true);
+    setNameError('');
+    try {
+      await updateProfile({ displayName: trimmed });
+      setEditingName(false);
+    } catch {
+      setNameError('Не удалось сохранить');
+    } finally {
+      setNameSaving(false);
+    }
+  };
+
+  const handleToggleHide = async () => {
+    setHideSaving(true);
+    try {
+      await updateProfile({ hideFromLeaderboard: !profile?.hideFromLeaderboard });
+    } finally {
+      setHideSaving(false);
+    }
   };
 
   return (
@@ -391,7 +402,7 @@ export default function ProfilePage() {
               <h2 className="font-semibold text-gray-800 text-sm">🕸 Карта компетенций</h2>
               <span className="text-xs text-gray-400">среднее по {attempts.filter(e => e.rubricScores).length} попыткам</span>
             </div>
-            <CompetencyRadar entries={attempts} />
+            <ProfileRadar entries={attempts} />
             <p className="text-xs text-gray-400">Показывает ваши средние баллы по каждому критерию оценки</p>
           </motion.div>
         )}
@@ -467,6 +478,82 @@ export default function ProfilePage() {
             </Link>
           </motion.div>
         )}
+
+        {/* Settings: nickname + leaderboard visibility */}
+        <motion.div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden" initial="hidden" animate="visible" custom={9} variants={fadeUp}>
+          <div className="px-5 py-4 border-b border-gray-100">
+            <h2 className="font-semibold text-gray-800 text-sm">⚙️ Настройки</h2>
+          </div>
+          <div className="divide-y divide-gray-50">
+
+            {/* Nickname */}
+            <div className="px-5 py-4 space-y-2">
+              <p className="text-sm font-medium text-gray-700">Отображаемое имя</p>
+              {editingName ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                    value={nameInput}
+                    onChange={(e) => setNameInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(false); }}
+                    maxLength={30}
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleSaveName}
+                    disabled={nameSaving}
+                    className="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                  >
+                    {nameSaving ? '...' : 'Сохранить'}
+                  </button>
+                  <button
+                    onClick={() => setEditingName(false)}
+                    className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1.5"
+                  >
+                    Отмена
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-900 font-medium">{profile?.displayName}</span>
+                  <button
+                    onClick={handleStartEditName}
+                    className="text-xs text-indigo-500 hover:text-indigo-700 transition-colors"
+                  >
+                    ✏️ Изменить
+                  </button>
+                </div>
+              )}
+              {nameError && <p className="text-xs text-red-500">{nameError}</p>}
+              <p className="text-xs text-gray-400">Это имя отображается в лидерборде</p>
+            </div>
+
+            {/* Hide from leaderboard */}
+            <div className="px-5 py-4 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-gray-700">Скрыть меня из лидерборда</p>
+                <p className="text-xs text-gray-400 mt-0.5">Твои результаты не будут видны другим участникам</p>
+              </div>
+              <button
+                onClick={handleToggleHide}
+                disabled={hideSaving}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none disabled:opacity-50 ${
+                  profile?.hideFromLeaderboard ? 'bg-indigo-600' : 'bg-gray-200'
+                }`}
+                role="switch"
+                aria-checked={!!profile?.hideFromLeaderboard}
+              >
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ${
+                    profile?.hideFromLeaderboard ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+          </div>
+        </motion.div>
+
       </div>
     </div>
   );

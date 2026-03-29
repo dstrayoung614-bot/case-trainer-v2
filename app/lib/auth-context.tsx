@@ -19,6 +19,7 @@ export interface UserProfile {
   displayName: string;
   role: UserRole;
   createdAt: unknown;
+  hideFromLeaderboard?: boolean;
 }
 
 interface AuthContextValue {
@@ -28,6 +29,7 @@ interface AuthContextValue {
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   logOut: () => Promise<void>;
+  updateProfile: (updates: { displayName?: string; hideFromLeaderboard?: boolean }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -97,8 +99,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
   }
 
+  async function updateProfile(updates: { displayName?: string; hideFromLeaderboard?: boolean }) {
+    if (!user || !db) throw new Error('Не авторизован');
+    const ref = doc(db, 'users', user.uid);
+    await setDoc(ref, updates, { merge: true });
+    setProfile((prev) => prev ? { ...prev, ...updates } : prev);
+  }
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signUp, signIn, logOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, signUp, signIn, logOut, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

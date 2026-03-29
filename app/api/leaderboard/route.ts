@@ -42,6 +42,7 @@ export async function GET() {
 
         const game = buildGamification(attempts);
         if (game.totalAttempts === 0) return null;
+        if (userData.hideFromLeaderboard === true) return null;
 
         const displayName =
           typeof userData.displayName === 'string' && userData.displayName.trim().length > 0

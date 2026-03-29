@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useCallback, useEffect, useRef, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { cases, guidedStarterCase, getRandomCase } from './lib/cases';
@@ -18,6 +18,7 @@ import {
   SolutionSections,
 } from './lib/types';
 import { track } from './lib/analytics';
+import { DataChart } from './components/data-chart';
 
 // ─── constants ───────────────────────────────────────────────────────────────
 
@@ -73,18 +74,21 @@ function formatDimension(raw: string): string {
 // ─── progress tracking (Firestore) ──────────────────────────────────────────
 
 const DIFFICULTY_LABELS: Record<string, string> = {
+  starter: '⭐ Старт',
   easy: 'Лёгкий',
   medium: 'Средний',
   hard: 'Сложный',
 };
 
 const DIFFICULTY_COLOR: Record<string, string> = {
+  starter: 'bg-indigo-100 text-indigo-700',
   easy: 'bg-emerald-100 text-emerald-700',
   medium: 'bg-amber-100 text-amber-700',
   hard: 'bg-red-100 text-red-700',
 };
 
 const DIFFICULTY_BORDER: Record<string, string> = {
+  starter: 'border-indigo-200 hover:border-indigo-400',
   easy: 'border-emerald-200 hover:border-emerald-400',
   medium: 'border-amber-200 hover:border-amber-400',
   hard: 'border-red-200 hover:border-red-400',
@@ -93,9 +97,9 @@ const DIFFICULTY_BORDER: Record<string, string> = {
 const SOLUTION_STEPS: { key: keyof SolutionSections; label: string; placeholder: string; hint: string }[] = [
   { key: 'framing',     label: 'Формулировка проблемы',       placeholder: 'Что именно не так? Границы проблемы? Почему важно сейчас?',              hint: 'Критерий 1: формулировка' },
   { key: 'hypotheses',  label: 'Гипотезы о причинах',         placeholder: 'Возможные причины, что наиболее вероятно, что проверить первым?',        hint: 'Критерий 2: диагностика' },
-  { key: 'metrics',     label: 'Метрики для проверки',        placeholder: 'Конкретные метрики — north star, leading indicators, guardrails',         hint: 'Критерий 3: метрики' },
+  { key: 'metrics',     label: 'Метрики для проверки',        placeholder: 'Конкретные метрики — основная метрика, главные индикаторы, guardrails',   hint: 'Критерий 3: метрики' },
   { key: 'actions',     label: 'Приоритизированные действия', placeholder: 'Что делать, в каком порядке и почему именно так?',                      hint: 'Критерий 4: приоритизация' },
-  { key: 'risks',       label: 'Риски и компромиссы',         placeholder: 'Что может пойти не так? Какие trade-offs в вашем решении?',              hint: 'Критерии 5–6: риски, структура' },
+  { key: 'risks',       label: 'Риски и компромиссы',         placeholder: 'Что может пойти не так? Какие компромиссы в вашем решении?',            hint: 'Критерии 5–6: риски, структура' },
 ];
 
 const EMPTY_SOLUTION: SolutionSections = { framing: '', hypotheses: '', metrics: '', actions: '', risks: '' };
@@ -349,23 +353,24 @@ function LandingScreen({
       <div className="max-w-xl w-full text-center space-y-8">
         <motion.div className="space-y-3" initial="hidden" animate="visible" custom={0} variants={fadeUp}>
           <span className="inline-block bg-indigo-100 text-indigo-700 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wide">
-            AI-тренажёр для продуктовых интервью
+            AI-тренажёр • Продуктовые интервью
           </span>
           <h1 className="text-4xl font-bold text-gray-900 leading-tight">
-            CaseTrainer
+            Как тебя оценит интервьюер бигтеха?
           </h1>
           <p className="text-lg text-gray-600 leading-relaxed">
-            Реши продуктовый кейс прямо сейчас — получи AI-разбор по 6 критериям.<br />
+            Реши один кейс — узнай свой уровень и главное слабое место за 30 секунд.  
             <span className="text-indigo-600 font-medium">Без регистрации.</span>
           </p>
         </motion.div>
 
         {/* How it works */}
-        <motion.div className="grid grid-cols-3 gap-3 text-center" initial="hidden" animate="visible" custom={1} variants={fadeUp}>
+        <motion.div className="grid grid-cols-4 gap-3 text-center" initial="hidden" animate="visible" custom={1} variants={fadeUp}>
           {[
             { icon: '📋', step: '1', label: 'Получаешь кейс', sub: 'Реальная продуктовая задача' },
             { icon: '✍️', step: '2', label: 'Пишешь решение', sub: 'В свободной форме' },
-            { icon: '🤖', step: '3', label: 'AI разбирает', sub: 'Оценка по 6 критериям + что улучшить' },
+            { icon: '🤖', step: '3', label: 'AI разбирает', sub: 'Оценка по 6 критериям' },
+            { icon: '⚡', step: '4', label: 'AI улучшает', sub: 'Апгрейд до уровня Senior PM' },
           ].map((item) => (
             <div key={item.step} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 relative">
               <div className="absolute -top-2 -left-2 bg-indigo-600 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">{item.step}</div>
@@ -411,6 +416,13 @@ function LandingScreen({
         </motion.div>
 
         <motion.div className="space-y-3" initial="hidden" animate="visible" custom={3} variants={fadeUp}>
+          {/* CTA 1: Экспресс-диагностика (предвижение на первое место) */}
+          <Link
+            href="/sat"
+            className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-xl transition-colors text-base shadow-md"
+          >
+            🎯 Проверить свой уровень — 13 мин
+          </Link>
           {allCasesSolved ? (
             <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-center">
               <p className="text-sm font-semibold text-emerald-700">🏆 Ты прошёл все кейсы!</p>
@@ -419,18 +431,18 @@ function LandingScreen({
           ) : (
             <button
               onClick={onGuided}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-xl transition-colors text-lg shadow-md"
+              className="w-full bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 rounded-xl transition-colors border border-gray-200 shadow-sm"
             >
               {isLoggedIn && nextCaseTitle
                 ? `Следующий кейс: ${nextCaseTitle} →`
                 : isLoggedIn
                 ? 'Продолжить подготовку →'
-                : 'Попробовать бесплатно →'}
+                : 'Решить полный кейс →'}
             </button>
           )}
           <button
             onClick={onBrowse}
-            className="w-full bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 rounded-xl transition-colors border border-gray-200 shadow-sm"
+            className="w-full bg-white hover:bg-gray-50 text-gray-600 font-medium py-3 rounded-xl transition-colors border border-gray-200 text-sm"
           >
             Выбрать кейс из каталога
           </button>
@@ -529,7 +541,7 @@ function CaseBrowserScreen({
   onSelect: (c: Case) => void;
   onBack: () => void;
 }) {
-  const [filter, setFilter] = useState<'all' | 'easy' | 'medium' | 'hard'>('all');
+  const [filter, setFilter] = useState<'all' | 'starter' | 'easy' | 'medium' | 'hard'>('all');
   const [skillFilter, setSkillFilter] = useState<string | null>(null);
 
   const allSkills = Array.from(new Set(cases.flatMap((c) => c.skillFocus)));
@@ -552,7 +564,7 @@ function CaseBrowserScreen({
 
         {/* difficulty filter */}
         <div className="flex gap-2 flex-wrap">
-          {(['all', 'easy', 'medium', 'hard'] as const).map((f) => (
+          {(['all', 'starter', 'easy', 'medium', 'hard'] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -560,6 +572,8 @@ function CaseBrowserScreen({
                 filter === f
                   ? f === 'all'
                     ? 'bg-gray-800 text-white border-gray-800'
+                    : f === 'starter'
+                    ? 'bg-indigo-500 text-white border-indigo-500'
                     : f === 'easy'
                     ? 'bg-emerald-500 text-white border-emerald-500'
                     : f === 'medium'
@@ -651,6 +665,10 @@ function CaseScreen({
 }) {
   const totalLength = Object.values(solution).join('').trim().length;
   const tooShort = totalLength < 20;
+  const MIN_SECTION = 10;
+  const emptySections = Object.values(solution).filter((v) => v.trim().length < MIN_SECTION);
+  const filledSections = SOLUTION_STEPS.length - emptySections.length;
+  const canSubmit = emptySections.length === 0;
 
   return (
     <div className="min-h-screen bg-gray-50 px-4 py-10">
@@ -686,6 +704,9 @@ function CaseScreen({
             <p className="text-gray-700 whitespace-pre-wrap leading-relaxed text-sm">
               {activeCase.description}
             </p>
+            {activeCase.chartData && (
+              <DataChart config={activeCase.chartData} />
+            )}
             <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 text-sm text-indigo-800">
               <span className="font-semibold">Фокус кейса: </span>
               {activeCase.expectedFocus}
@@ -717,9 +738,20 @@ function CaseScreen({
           <div className="space-y-3">
             <div className="flex items-center justify-between px-1 mb-1">
               <h3 className="font-semibold text-gray-800">Ваш ответ</h3>
-              <span className={`text-xs ${tooShort && totalLength > 0 ? 'text-orange-400' : 'text-gray-400'}`}>
-                {totalLength === 0 ? 'Заполните хотя бы один раздел' : `${totalLength} симв. суммарно${tooShort ? ' — напишите немного больше' : ''}`}
-              </span>
+              <span className="text-xs text-indigo-600 font-medium">{filledSections}/{SOLUTION_STEPS.length} разделов</span>
+            </div>
+
+            {/* progress bar */}
+            <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-indigo-500 rounded-full transition-all duration-300"
+                style={{ width: `${(filledSections / SOLUTION_STEPS.length) * 100}%` }}
+              />
+            </div>
+
+            {/* encouragement hint */}
+            <div className="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-xs text-indigo-700 leading-relaxed">
+              💬 <strong>Пиши как на интервью — вслух, своими словами.</strong> Не нужно идеального ответа: AI разберёт даже черновые мысли и покажет что улучшить.
             </div>
 
             {SOLUTION_STEPS.map((step, i) => (
@@ -734,20 +766,29 @@ function CaseScreen({
                   </div>
                 </div>
                 <textarea
-                  className="w-full h-24 border border-gray-200 rounded-xl p-3 text-gray-800 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-indigo-400 placeholder-gray-400"
+                  className={`w-full h-24 border rounded-xl p-3 text-gray-800 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-indigo-400 placeholder-gray-400 ${
+                    solution[step.key].trim().length > 0 && solution[step.key].trim().length < MIN_SECTION
+                      ? 'border-orange-300'
+                      : 'border-gray-200'
+                  }`}
                   placeholder={step.placeholder}
                   value={solution[step.key]}
                   onChange={(e) => setSolution({ ...solution, [step.key]: e.target.value })}
                 />
+                {solution[step.key].trim().length > 0 && solution[step.key].trim().length < MIN_SECTION && (
+                  <p className="text-xs text-orange-400 mt-1">
+                    Ещё {MIN_SECTION - solution[step.key].trim().length} симв.
+                  </p>
+                )}
               </div>
             ))}
 
             <button
               onClick={onAnalyze}
-              disabled={totalLength === 0}
+              disabled={!canSubmit}
               className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-colors"
             >
-              Далее: самооценка →
+              {canSubmit ? 'Далее: самооценка →' : `Заполните все разделы (осталось ${emptySections.length})`}
             </button>
           </div>
         </div>
@@ -979,6 +1020,20 @@ function AnimatedScore({ value }: { value: number }) {
   return <>{display.toFixed(1)}</>;
 }
 
+// ─── percentile helper (нормальное распределение, µ=2.5, σ=0.75) ────────────────────────
+function scoreToPercentile(avg: number): number {
+  // erf-аппроксимация через таблицу (z-счёт, му 2.5, сигма 0.75)
+  const mu = 2.5;
+  const sigma = 0.75;
+  const z = (avg - mu) / sigma;
+  // rational approximation of CDF
+  const t = 1 / (1 + 0.2315419 * Math.abs(z));
+  const poly = t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+  const cdf = 1 - (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * z * z) * poly;
+  const p = z >= 0 ? cdf : 1 - cdf;
+  return Math.max(1, Math.min(99, Math.round(p * 100)));
+}
+
 function FeedbackScreen({
   feedback,
   activeCase,
@@ -1017,6 +1072,13 @@ function FeedbackScreen({
   const avgScore =
     Object.values(feedback.scores).reduce((a, b) => a + b, 0) /
     Object.values(feedback.scores).length;
+
+  // Перцентиль и главный косяк
+  const percentile = scoreToPercentile(avgScore);
+  const weakestEntry = (Object.entries(feedback.scores) as [keyof RubricScores, number][])
+    .sort(([, a], [, b]) => a - b)[0];
+  const weakestKey = weakestEntry[0];
+  const weakestScore = weakestEntry[1];
 
   const scoreLabel =
     avgScore >= 4
@@ -1095,6 +1157,39 @@ function FeedbackScreen({
             </motion.div>
           )}
         </div>
+
+        {/* ——— ДОФАМИН: перцентиль + косяк ——— */}
+        {!feedback.isMock && (
+          <motion.div
+            className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl p-5 text-white space-y-4"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: 0.25 }}
+          >
+            {/* Перцентиль */}
+            <div className="flex items-center gap-4">
+              <div className="text-5xl font-black leading-none">{percentile}%</div>
+              <div>
+                <p className="font-bold text-base leading-tight">Ты лучше {percentile}% кандидатов</p>
+                <p className="text-indigo-200 text-xs mt-0.5">по среднему баллу {avgScore.toFixed(1)}/5</p>
+              </div>
+            </div>
+            {/* Главный косяк */}
+            <div className="bg-white/15 rounded-xl p-3 space-y-1">
+              <p className="text-xs font-semibold text-indigo-200 uppercase tracking-wide">Слабое место</p>
+              <p className="font-semibold text-sm">
+                {RUBRIC_LABELS[weakestKey]} — {weakestScore}/5.
+                {weakestScore <= 1 && ' Именно это режет оффер.'}
+                {weakestScore === 2 && ' Над этим стоит поработать в первую очередь.'}
+                {weakestScore >= 3 && ' Резерв для роста.'}
+              </p>
+            </div>
+            {/* Хук */}
+            <p className="text-xs text-indigo-100">
+              Хочешь поднять {RUBRIC_LABELS[weakestKey].toLowerCase()}? ↓ Ниже — топ-3 действия и кейс для прокачки.
+            </p>
+          </motion.div>
+        )}
 
         {/* confidence calibration */}
         {!feedback.isMock && (() => {
@@ -1303,7 +1398,7 @@ function FeedbackScreen({
           <div className="flex items-center justify-center gap-2 py-1">
             {isGuest && guestUpgradeUsed ? (
               <Link
-                href="/register"
+                href="/register?redirect=/?autostart=1"
                 className="text-sm text-indigo-600 hover:text-indigo-800 font-medium underline decoration-dotted flex items-center gap-1"
               >
                 ✨ Зарегистрируйся, чтобы улучшить этот ответ
@@ -1356,10 +1451,10 @@ function FeedbackScreen({
               <p className="text-sm text-gray-600 mt-1">Зарегистрируйся бесплатно — сохраняй прогресс,<br />решай все 40 кейсов и смотри динамику роста</p>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
-              <Link href="/register" className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl text-sm text-center transition-colors">
+              <Link href="/register?redirect=/?autostart=1" className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl text-sm text-center transition-colors">
                 Создать аккаунт — бесплатно
               </Link>
-              <Link href="/login" className="flex-1 bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 rounded-xl text-sm text-center border border-gray-200 transition-colors">
+              <Link href="/login?redirect=/?autostart=1" className="flex-1 bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 rounded-xl text-sm text-center border border-gray-200 transition-colors">
                 Войти
               </Link>
             </div>
@@ -1612,10 +1707,10 @@ function UpgradeScreen({
                 <p className="text-sm text-gray-600 mt-1">Зарегистрируйся бесплатно — решай все 40 кейсов,<br />сохраняй прогресс и смотри динамику роста</p>
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
-                <Link href="/register" className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl text-sm text-center transition-colors">
+                <Link href="/register?redirect=/?autostart=1" className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl text-sm text-center transition-colors">
                   Создать аккаунт — бесплатно
                 </Link>
-                <Link href="/login" className="flex-1 bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 rounded-xl text-sm text-center border border-gray-200 transition-colors">
+                <Link href="/login?redirect=/?autostart=1" className="flex-1 bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 rounded-xl text-sm text-center border border-gray-200 transition-colors">
                   Войти
                 </Link>
               </div>
@@ -1815,14 +1910,40 @@ function OnboardingModal({ onClose }: { onClose: () => void }) {
 
 // ─── main app ─────────────────────────────────────────────────────────────────
 
-export default function Home() {
+function HomeInner() {
   const { user, profile, logOut } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const [screen, setScreen] = useState<AppScreen>('landing');
-  const [activeCase, setActiveCase] = useState<Case>(guidedStarterCase);
-  const [solution, setSolution] = useState<SolutionSections>(EMPTY_SOLUTION);
-  const [selfReview, setSelfReview] = useState<SelfReview>({ confidence: 3, uncertainArea: '' });
+  const [screen, setScreen] = useState<AppScreen>(() => {
+    if (typeof window === 'undefined') return 'landing';
+    const s = localStorage.getItem('ct_draft_screen') as AppScreen | null;
+    return (s === 'case' || s === 'self-review') ? s : 'landing';
+  });
+  const [activeCase, setActiveCase] = useState<Case>(() => {
+    if (typeof window === 'undefined') return guidedStarterCase;
+    try {
+      const id = localStorage.getItem('ct_draft_caseId');
+      if (id) return cases.find((c) => c.id === Number(id)) ?? guidedStarterCase;
+    } catch { /* ignore */ }
+    return guidedStarterCase;
+  });
+  const [solution, setSolution] = useState<SolutionSections>(() => {
+    if (typeof window === 'undefined') return EMPTY_SOLUTION;
+    try {
+      const raw = localStorage.getItem('ct_draft_solution');
+      if (raw) return JSON.parse(raw) as SolutionSections;
+    } catch { /* ignore */ }
+    return EMPTY_SOLUTION;
+  });
+  const [selfReview, setSelfReview] = useState<SelfReview>(() => {
+    if (typeof window === 'undefined') return { confidence: 3, uncertainArea: '' };
+    try {
+      const raw = localStorage.getItem('ct_draft_selfReview');
+      if (raw) return JSON.parse(raw) as SelfReview;
+    } catch { /* ignore */ }
+    return { confidence: 3, uncertainArea: '' };
+  });
   const [feedback, setFeedback] = useState<FeedbackResponse | null>(null);
   const [previousFeedback, setPreviousFeedback] = useState<FeedbackResponse | null>(null);
   const [upgrade, setUpgrade] = useState<UpgradeResponse | null>(null);
@@ -1867,6 +1988,36 @@ export default function Home() {
       });
     }
   }, [screen, user]);
+
+  // автосохранение черновика в localStorage при каждом изменении
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (screen === 'case' || screen === 'self-review') {
+      localStorage.setItem('ct_draft_screen', screen);
+      localStorage.setItem('ct_draft_caseId', String(activeCase.id));
+      localStorage.setItem('ct_draft_solution', JSON.stringify(solution));
+      localStorage.setItem('ct_draft_selfReview', JSON.stringify(selfReview));
+    }
+  }, [screen, activeCase.id, solution, selfReview]);
+
+  const clearDraft = () => {
+    ['ct_draft_screen', 'ct_draft_caseId', 'ct_draft_solution', 'ct_draft_selfReview'].forEach(
+      (k) => localStorage.removeItem(k)
+    );
+  };
+
+  // авто-старт кейса после редиректа с регистрации / логина
+  const autoStartDone = useRef(false);
+  useEffect(() => {
+    if (autoStartDone.current) return;
+    if (searchParams.get('autostart') === '1' && screen === 'landing') {
+      autoStartDone.current = true;
+      // убираем ?autostart из URL, чтобы не триггерить повторно при обновлении
+      router.replace('/');
+      startGuided();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, screen]);
 
   const resetForCase = (c: Case, resetAttempt = true) => {
     setActiveCase(c);
@@ -1963,6 +2114,7 @@ export default function Home() {
           solution: joinSolutionFull(solution),
           selfReview,
           rubricVersion: 'v1',
+          chartTextSummary: activeCase.chartData?.textSummary,
         }),
         },
         (attempt, max) => setRetryInfo(`Повторная попытка ${attempt}/${max}...`),
@@ -1988,6 +2140,7 @@ export default function Home() {
             avgScore: avg,
             confidence: selfReview.confidence,
             rubricScores: data.scores as Record<string, number>,
+            solutionText: joinSolutionFull(solution),
           });
         }
 
@@ -2000,6 +2153,7 @@ export default function Home() {
         setProgressStats(calcStats(afterEntries));
       }
       setFeedback(data);
+      clearDraft();
       setScreen('feedback');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Неизвестная ошибка';
@@ -2103,6 +2257,7 @@ export default function Home() {
   };
 
   const goHome = () => {
+    clearDraft();
     setScreen('landing');
   };
 
@@ -2265,5 +2420,13 @@ export default function Home() {
         />
       )}
     </>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense>
+      <HomeInner />
+    </Suspense>
   );
 }

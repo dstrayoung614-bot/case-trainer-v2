@@ -22,19 +22,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Solution is too short' }, { status: 400 });
     }
 
-    const apiKey = process.env.OPENROUTER_API_KEY;
-    if (!apiKey) {
+    const yandexKey = process.env.YANDEX_API_KEY;
+    const folderId = process.env.YANDEX_FOLDER_ID ?? '';
+    const openrouterKey = process.env.OPENROUTER_API_KEY;
+    const useYandex = !!yandexKey;
+
+    if (!yandexKey && !openrouterKey) {
       return NextResponse.json(getMockUpgrade(body), { status: 200 });
     }
 
-    const client = new OpenAI({
-      baseURL: 'https://openrouter.ai/api/v1',
-      apiKey,
-      defaultHeaders: {
-        'HTTP-Referer': 'https://case-trainer.app',
-        'X-Title': 'CaseTrainer',
-      },
-    });
     const scoresText = Object.entries(body.feedback.scores)
       .map(([k, v]) => `${k}: ${v}/5`)
       .join(', ');
@@ -122,21 +118,41 @@ weaknesses: 2-3 штуки.
 changes: СТРОГО от 3 до 5 штук — только самые значимые улучшения, не больше. Если одна и та же цитата встречается несколько раз в ответе студента — делай ОДНО изменение, не несколько. Не дублируй одинаковые или похожие "БЫЛО"-фразы.
 coachingQuestions: ровно 3. keyLessons: ровно 3. В changes.original — цитируй точные слова студента.`;
 
-    const completion = await client.chat.completions.create({
-      model: process.env.OPENROUTER_MODEL ?? 'google/gemini-2.0-flash-001',
-      temperature: 0.4,
-      response_format: { type: 'json_object' },
-      messages: [
-        {
-          role: 'system',
-          content:
-            'Ты Senior Product Manager и тренер по кейс-интервью. Ты ведёшь себя как строгий но конструктивный интервьюер из Google, Meta или Avito. Сначала оцениваешь качество мышления — выявляешь слабости в логике, метриках, причинно-следственных связях. Затем переписываешь ответ inline, сохраняя голос студента, но поднимая каждую мысль до уровня сильного PM-кандидата. Ты никогда не даёшь общую обратную связь — только конкретику, привязанную к этому кейсу. Отвечай строго в JSON.',
-        },
-        { role: 'user', content: prompt },
-      ],
-    });
+    const upgradeModel = `gpt://${folderId}/yandexgpt-5.1/latest`;
+    const systemMsg = 'Ты Senior Product Manager и тренер по кейс-интервью. Ты ведёшь себя как строгий но конструктивный интервьюер из Google, Meta или Avito. Сначала оцениваешь качество мышления — выявляешь слабости в логике, метриках, причинно-следственных связях. Затем переписываешь ответ inline, сохраняя голос студента, но поднимая каждую мысль до уровня сильного PM-кандидата. Ты никогда не даёшь общую обратную связь — только конкретику, привязанную к этому кейсу. Отвечай строго в JSON.';
+    const upgradeMessages = [
+      { role: 'system', content: systemMsg },
+      { role: 'user', content: prompt },
+    ];
 
-    const rawContent = completion.choices[0].message.content ?? '{}';
+    let rawContent: string;
+    if (useYandex) {
+      const res = await fetch('https://llm.api.cloud.yandex.net/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Api-Key ${yandexKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ model: upgradeModel, temperature: 0.4, messages: upgradeMessages }),
+      });
+      const data = await res.json() as { choices?: { message?: { content?: string } }[]; error?: { message: string } };
+      if (!res.ok || data.error) throw new Error(data.error?.message ?? 'Yandex API error');
+      rawContent = data.choices?.[0]?.message?.content ?? '{}';
+    } else {
+      const client = new OpenAI({
+        baseURL: 'https://openrouter.ai/api/v1',
+        apiKey: openrouterKey!,
+        defaultHeaders: { 'HTTP-Referer': 'https://case-trainer.app', 'X-Title': 'CaseTrainer' },
+      });
+      const completion = await client.chat.completions.create({
+        model: process.env.OPENROUTER_MODEL ?? 'google/gemini-2.0-flash-001',
+        temperature: 0.4,
+        response_format: { type: 'json_object' },
+        messages: upgradeMessages as Parameters<typeof client.chat.completions.create>[0]['messages'],
+      });
+      rawContent = completion.choices[0].message.content ?? '{}';
+    }
+
     // Извлекаем JSON из markdown-блока если AI обернул его в ```json ... ```
     const jsonMatch = rawContent.match(/```(?:json)?\s*([\s\S]*?)```/);
     const rawJson = jsonMatch ? jsonMatch[1] : rawContent;

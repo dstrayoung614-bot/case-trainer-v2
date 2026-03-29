@@ -1,4 +1,33 @@
-export type Difficulty = 'easy' | 'medium' | 'hard';
+export type Difficulty = 'starter' | 'easy' | 'medium' | 'hard';
+
+// ─── chart types ─────────────────────────────────────────────────────────────
+
+export type ChartSeries = {
+  key: string;
+  label: string;
+  color: string;
+  anomaly?: boolean;
+};
+
+export type ChartDataPoint = Record<string, string | number>;
+
+export type ChartConfig = {
+  type: 'line';
+  title: string;
+  description?: string;
+  xAxisKey: string;
+  xAxisLabel?: string;
+  yAxisLabel?: string;
+  yAxisUnit?: string;
+  anomalyX?: string | number;
+  anomalyLabel?: string;
+  series: ChartSeries[];
+  data: ChartDataPoint[];
+  /** Текстовое описание данных для AI-промпта */
+  textSummary: string;
+};
+
+// ─── core types ───────────────────────────────────────────────────────────────
 
 export type Case = {
   id: number;
@@ -9,6 +38,7 @@ export type Case = {
   estimatedMinutes: number;
   expectedFocus: string;
   exampleSolution?: string;
+  chartData?: ChartConfig;
 };
 
 export type SolutionSections = {
@@ -60,6 +90,7 @@ export type AnalyzeRequest = {
   rubricVersion: string;
   apiKey: string;
   model: string;
+  chartTextSummary?: string;
 };
 
 export type UpgradeChange = {

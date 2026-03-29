@@ -227,7 +227,11 @@ export default function AdminPage() {
                   </tr>
                 )}
                 {sorted.map((u) => (
-                  <tr key={u.uid} className="border-b border-gray-50 hover:bg-gray-50">
+                  <tr
+                    key={u.uid}
+                    className="border-b border-gray-50 hover:bg-indigo-50 cursor-pointer transition-colors"
+                    onClick={() => router.push(`/admin/users/${u.uid}`)}
+                  >
                     <td className="px-6 py-3 text-gray-800 font-medium">{u.email}</td>
                     <td className="px-4 py-3">
                       <span

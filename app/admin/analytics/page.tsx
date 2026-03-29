@@ -17,6 +17,9 @@ type Summary = {
   uniqueFeedbackUids: number;
   totalUpgrades: number;
   uniqueUpgradeUids: number;
+  totalLandingViews: number;
+  anonFeedbacks: number;
+  registeredFeedbacks: number;
 };
 
 type AnalyticsData = {
@@ -95,6 +98,38 @@ export default function AnalyticsPage() {
           </div>
           <div className="flex gap-3">
             <Link href="/admin" className="text-sm text-gray-500 hover:text-gray-700">← Пользователи</Link>
+          </div>
+        </div>
+
+        {/* Conversion block */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <h2 className="font-semibold text-gray-800 mb-1">Конверсия: визит → кейс → регистрация</h2>
+          <p className="text-xs text-gray-400 mb-4">Анонимные = все незарегистрированные считаются как один визитор, поэтому здесь счётчик событий</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-slate-50 rounded-xl p-3">
+              <p className="text-xs text-gray-500">Всего посещений лендинга</p>
+              <p className="text-2xl font-bold text-gray-800 mt-1">{summary.totalLandingViews}</p>
+              <p className="text-xs text-gray-400 mt-0.5">включая повторные</p>
+            </div>
+            <div className="bg-amber-50 rounded-xl p-3">
+              <p className="text-xs text-gray-500">Решили кейс (анонимно)</p>
+              <p className="text-2xl font-bold text-amber-600 mt-1">{summary.anonFeedbacks}</p>
+              <p className="text-xs text-gray-400 mt-0.5">не зарегистрировались</p>
+            </div>
+            <div className="bg-emerald-50 rounded-xl p-3">
+              <p className="text-xs text-gray-500">Решили кейс (рег)</p>
+              <p className="text-2xl font-bold text-emerald-600 mt-1">{summary.registeredFeedbacks}</p>
+              <p className="text-xs text-gray-400 mt-0.5">уникальных пользователей</p>
+            </div>
+            <div className="bg-indigo-50 rounded-xl p-3">
+              <p className="text-xs text-gray-500">Конверсия в регистрацию</p>
+              <p className="text-2xl font-bold text-indigo-600 mt-1">
+                {summary.anonFeedbacks + summary.registeredFeedbacks > 0
+                  ? `${Math.round((summary.registeredFeedbacks / (summary.anonFeedbacks + summary.registeredFeedbacks)) * 100)}%`
+                  : '—'}
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">из решивших кейс</p>
+            </div>
           </div>
         </div>
 

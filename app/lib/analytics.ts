@@ -13,7 +13,10 @@ export type EventName =
   | 'retry_started'
   | 'upgrade_clicked'
   | 'upgrade_received'
-  | 'next_case_clicked';
+  | 'next_case_clicked'
+  | 'sat_started'
+  | 'sat_case_submitted'
+  | 'sat_completed';
 
 export type TrackEvent = {
   event: EventName;

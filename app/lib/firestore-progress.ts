@@ -15,6 +15,7 @@ export interface AttemptEntry {
   confidence: number;
   ts: number;
   rubricScores?: Record<string, number>;
+  solutionText?: string;
 }
 
 export async function saveAttempt(uid: string, entry: Omit<AttemptEntry, 'ts'>) {
@@ -41,6 +42,7 @@ export async function loadAttempts(uid: string): Promise<AttemptEntry[]> {
       confidence: data.confidence,
       ts: data.ts?.toMillis?.() ?? Date.now(),
       rubricScores: data.rubricScores ?? undefined,
+      solutionText: data.solutionText ?? undefined,
     };
   });
 }
